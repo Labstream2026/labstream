@@ -8,7 +8,7 @@ import {
   requireSuperAdmin,
   isSuperAdmin,
 } from "@/lib/cms-guard";
-import { PageStatus } from "@prisma/client";
+import { PageStatus, Prisma } from "@prisma/client";
 import {
   BLOCK_TYPES,
   BLOCK_LABELS,
@@ -145,7 +145,7 @@ async function saveBlock(formData: FormData) {
 
   await prisma.block.update({
     where: { id: blockId },
-    data: { data: nextData, updatedById: me.id },
+    data: { data: nextData as Prisma.InputJsonValue, updatedById: me.id },
   });
 
   revalidatePath("/");
@@ -170,7 +170,7 @@ async function addBlock(formData: FormData) {
       pageId,
       type,
       order: (lastBlock?.order ?? -1) + 1,
-      data: BLOCK_DEFAULTS[type],
+      data: BLOCK_DEFAULTS[type] as Prisma.InputJsonValue,
       updatedById: me.id,
     },
   });
