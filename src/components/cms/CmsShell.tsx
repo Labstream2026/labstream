@@ -38,6 +38,24 @@ export function CmsShell({ user, isSuper, signOut, children }: Props) {
         <Logo size={0.95} />
       </Link>
 
+      <div className="mb-3 mt-1 rounded-xl border border-orange/30 bg-orange/[0.06] p-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-orange/80">
+          Estás en el CMS
+        </div>
+        <p className="mt-1 text-[12px] leading-snug text-white/65">
+          Aquí editas el contenido de la web pública.
+        </p>
+        <Link
+          href="/app"
+          className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-orange hover:underline"
+        >
+          Ir a la Webapp →
+        </Link>
+      </div>
+
+      <div className="mb-1 mt-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/30">
+        Web pública
+      </div>
       <nav className="flex flex-col gap-0.5 text-[14px]">
         <NavLink href="/cms" label="Dashboard" active={pathname === "/cms"} />
         <NavLink

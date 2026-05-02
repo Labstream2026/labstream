@@ -3,13 +3,22 @@ import { auth, signIn } from "@/auth";
 import { AuthError } from "next-auth";
 import { Logo } from "@/components/Logo";
 
-export default async function LoginPage(props: {
-  searchParams: Promise<{ error?: string; callbackUrl?: string }>;
-}) {
-  const session = await auth();
-  if (session?.user) redirect("/cms");
+function safeNext(raw: string | undefined): string {
+  if (!raw) return "/app";
+  // Solo permitimos rutas internas (empiezan con /), evitar open-redirect
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/app";
+  return raw;
+}
 
+export default async function LoginPage(props: {
+  searchParams: Promise<{ error?: string; next?: string; callbackUrl?: string }>;
+}) {
   const sp = await props.searchParams;
+  const next = safeNext(sp.next ?? sp.callbackUrl);
+
+  const session = await auth();
+  if (session?.user) redirect(next);
+
   const errorMsg =
     sp.error === "CredentialsSignin"
       ? "Email o contraseña incorrectos."
@@ -19,15 +28,18 @@ export default async function LoginPage(props: {
 
   async function handleLogin(formData: FormData) {
     "use server";
+    const target = safeNext(String(formData.get("next") ?? ""));
     try {
       await signIn("credentials", {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
-        redirectTo: "/cms",
+        redirectTo: target,
       });
     } catch (e) {
       if (e instanceof AuthError) {
-        redirect(`/cms/login?error=${e.type}`);
+        const qs = new URLSearchParams({ error: e.type });
+        if (target !== "/app") qs.set("next", target);
+        redirect(`/cms/login?${qs.toString()}`);
       }
       throw e;
     }
@@ -58,6 +70,7 @@ export default async function LoginPage(props: {
           )}
 
           <form action={handleLogin} className="flex flex-col gap-3">
+            <input type="hidden" name="next" value={next} />
             <label className="flex flex-col gap-1.5">
               <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
                 Email
