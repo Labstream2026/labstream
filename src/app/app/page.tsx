@@ -1,0 +1,546 @@
+import Link from "next/link";
+import {
+  ProjectStatus,
+  DeliverableStatus,
+  TaskStatus,
+} from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import {
+  requireAppUser,
+  getPrimaryAppRole,
+  listVisibleProjectIds,
+  STATUS_LABELS,
+  DELIVERABLE_KIND_LABELS,
+} from "@/lib/app-guards";
+
+export default async function AppDashboard() {
+  const me = await requireAppUser();
+  const role = await getPrimaryAppRole(me.id, me.role);
+  const access = await listVisibleProjectIds(me.id, me.role);
+
+  if (role === "CLIENT") return <ClientDashboard userId={me.id} access={access} name={me.name ?? me.email} />;
+  if (role === "TEAM") return <TeamDashboard userId={me.id} access={access} name={me.name ?? me.email} />;
+  return <ProducerDashboard userId={me.id} access={access} name={me.name ?? me.email} isMaster={role === "MASTER"} />;
+}
+
+// ─── CLIENTE ─────────────────────────────────────────────────
+
+async function ClientDashboard({
+  userId,
+  access,
+  name,
+}: {
+  userId: string;
+  access: { all: true } | { all: false; ids: string[] };
+  name: string;
+}) {
+  const where = access.all ? {} : { id: { in: access.ids } };
+
+  const [pendingApprovals, projects] = await Promise.all([
+    prisma.deliverable.findMany({
+      where: {
+        status: DeliverableStatus.CLIENT_REVIEW,
+        project: where,
+      },
+      include: {
+        project: { select: { id: true, name: true, code: true } },
+        currentVersion: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+    }),
+    prisma.project.findMany({
+      where,
+      include: {
+        clientOrg: { select: { name: true } },
+        producerOrg: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 6,
+    }),
+  ]);
+
+  return (
+    <div className="px-5 py-6 md:px-10 md:py-10">
+      <div className="mb-8">
+        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
+          Hola
+        </div>
+        <h1
+          className="mt-1 font-heading text-white"
+          style={{ fontSize: 44, lineHeight: 1.05, letterSpacing: "-1px" }}
+        >
+          {name.split(" ")[0]}
+        </h1>
+      </div>
+
+      {pendingApprovals.length > 0 && (
+        <div
+          className="lg mb-10 rounded-3xl p-6"
+          style={{
+            border: "1px solid rgba(232,100,12,0.35)",
+            background:
+              "linear-gradient(180deg, rgba(232,100,12,0.08), transparent 80%)",
+          }}
+        >
+          <div className="mb-2 text-[12px] font-semibold uppercase tracking-widest text-orange">
+            Por revisar
+          </div>
+          <h2
+            className="mb-5 font-heading text-white"
+            style={{ fontSize: 28, lineHeight: 1.1, letterSpacing: "-0.5px" }}
+          >
+            Tienes {pendingApprovals.length}{" "}
+            {pendingApprovals.length === 1 ? "entrega" : "entregas"} pendientes
+            de revisar
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {pendingApprovals.map((d) => (
+              <Link
+                key={d.id}
+                href={`/app/deliverables/${d.id}`}
+                className="lg-strong flex items-center justify-between gap-3 rounded-xl p-4 transition-colors hover:bg-white/[0.09]"
+              >
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium uppercase tracking-wider text-white/45">
+                    {d.project.name}
+                  </div>
+                  <div className="truncate text-[15px] font-semibold text-white">
+                    {DELIVERABLE_KIND_LABELS[d.kind] ?? d.kind} · {d.title}
+                  </div>
+                </div>
+                <span className="rounded-full bg-orange px-3 py-1.5 text-[12px] font-semibold text-white">
+                  Revisar
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="mb-4 text-[16px] font-semibold text-white">
+        Tus proyectos
+      </h2>
+      {projects.length === 0 ? (
+        <div className="lg rounded-2xl p-8 text-center text-[14px] text-white/55">
+          Aún no tienes proyectos asignados.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} clientView />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TEAM ────────────────────────────────────────────────────
+
+async function TeamDashboard({
+  userId,
+  access,
+  name,
+}: {
+  userId: string;
+  access: { all: true } | { all: false; ids: string[] };
+  name: string;
+}) {
+  const myTasks = await prisma.task.findMany({
+    where: {
+      assignees: { some: { userId } },
+      status: { in: [TaskStatus.TODO, TaskStatus.DOING, TaskStatus.REVIEW] },
+    },
+    include: {
+      phase: {
+        include: { project: { select: { id: true, name: true, code: true } } },
+      },
+    },
+    orderBy: [{ dueDate: "asc" }, { updatedAt: "desc" }],
+    take: 12,
+  });
+
+  const where = access.all ? {} : { id: { in: access.ids } };
+  const projects = await prisma.project.findMany({
+    where,
+    include: {
+      clientOrg: { select: { name: true } },
+      producerOrg: { select: { name: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 6,
+  });
+
+  return (
+    <div className="px-5 py-6 md:px-10 md:py-10">
+      <div className="mb-8">
+        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
+          Tu día
+        </div>
+        <h1
+          className="mt-1 font-heading text-white"
+          style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
+        >
+          Hola, {name.split(" ")[0]}
+        </h1>
+      </div>
+
+      <h2 className="mb-3 text-[16px] font-semibold text-white">
+        Mis tareas pendientes ({myTasks.length})
+      </h2>
+      {myTasks.length === 0 ? (
+        <div className="lg mb-8 rounded-2xl p-8 text-center text-[14px] text-white/55">
+          No tienes tareas asignadas en este momento.
+        </div>
+      ) : (
+        <div className="lg mb-10 overflow-x-auto rounded-2xl">
+          <table className="w-full text-left text-[14px]">
+            <thead>
+              <tr
+                className="border-b text-[11px] uppercase tracking-wider text-white/45"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <th className="px-5 py-3 font-medium">Tarea</th>
+                <th className="px-5 py-3 font-medium">Proyecto</th>
+                <th className="px-5 py-3 font-medium">Fase</th>
+                <th className="px-5 py-3 font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myTasks.map((t) => (
+                <tr
+                  key={t.id}
+                  className="border-b text-white/85"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <td className="px-5 py-3 font-medium text-white">{t.title}</td>
+                  <td className="px-5 py-3">
+                    <Link
+                      href={`/app/projects/${t.phase.project.id}`}
+                      className="text-orange hover:underline"
+                    >
+                      {t.phase.project.name}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-white/70">{t.phase.name}</td>
+                  <td className="px-5 py-3">
+                    <StatusPill status={t.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2 className="mb-3 text-[16px] font-semibold text-white">
+        Mis proyectos
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {projects.map((p) => (
+          <ProjectCard key={p.id} project={p} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── PRODUCER / MASTER ───────────────────────────────────────
+
+async function ProducerDashboard({
+  userId,
+  access,
+  name,
+  isMaster,
+}: {
+  userId: string;
+  access: { all: true } | { all: false; ids: string[] };
+  name: string;
+  isMaster: boolean;
+}) {
+  const where = access.all ? {} : { id: { in: access.ids } };
+
+  const [
+    activeCount,
+    waitingClientCount,
+    draftCount,
+    projects,
+    waitingClient,
+    recentActivity,
+  ] = await Promise.all([
+    prisma.project.count({
+      where: { ...where, status: ProjectStatus.ACTIVE },
+    }),
+    prisma.deliverable.count({
+      where: {
+        project: where,
+        status: DeliverableStatus.CLIENT_REVIEW,
+      },
+    }),
+    prisma.project.count({
+      where: { ...where, status: ProjectStatus.DRAFT },
+    }),
+    prisma.project.findMany({
+      where,
+      include: {
+        clientOrg: { select: { name: true } },
+        producerOrg: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 6,
+    }),
+    prisma.deliverable.findMany({
+      where: {
+        project: where,
+        status: DeliverableStatus.CLIENT_REVIEW,
+      },
+      include: {
+        project: { select: { id: true, name: true } },
+      },
+      take: 5,
+    }),
+    prisma.activityLog.findMany({
+      where: { project: where },
+      include: {
+        actor: { select: { name: true, email: true } },
+        project: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+  ]);
+
+  return (
+    <div className="px-5 py-6 md:px-10 md:py-10">
+      <div className="mb-8">
+        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
+          {isMaster ? "Master · Vista global" : "Productor"}
+        </div>
+        <h1
+          className="mt-1 font-heading text-white"
+          style={{ fontSize: 44, lineHeight: 1.05, letterSpacing: "-1px" }}
+        >
+          Hola, {name.split(" ")[0]}
+        </h1>
+      </div>
+
+      <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <StatCard label="Proyectos activos" value={activeCount} href="/app/projects?status=ACTIVE" />
+        <StatCard
+          label="Esperando cliente"
+          value={waitingClientCount}
+          href="/app/projects"
+          accent
+        />
+        <StatCard label="En borrador" value={draftCount} href="/app/projects?status=DRAFT" />
+      </div>
+
+      <div className="mb-10 grid gap-6 lg:grid-cols-2">
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[16px] font-semibold text-white">Proyectos</h2>
+            <Link href="/app/projects" className="text-[12px] text-orange hover:underline">
+              Ver todos →
+            </Link>
+          </div>
+          <div className="flex flex-col gap-3">
+            {projects.map((p) => (
+              <ProjectCard key={p.id} project={p} compact />
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-[16px] font-semibold text-white">
+            Esperando cliente
+          </h2>
+          {waitingClient.length === 0 ? (
+            <div className="lg rounded-2xl p-6 text-[13px] text-white/55">
+              Nada pendiente del lado cliente.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {waitingClient.map((d) => (
+                <Link
+                  key={d.id}
+                  href={`/app/deliverables/${d.id}`}
+                  className="lg flex items-center justify-between rounded-xl px-4 py-3 hover:bg-white/[0.07]"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[12px] text-white/55">
+                      {d.project.name}
+                    </div>
+                    <div className="truncate text-[14px] font-medium text-white">
+                      {DELIVERABLE_KIND_LABELS[d.kind] ?? d.kind} · {d.title}
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-orange">→</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section>
+        <h2 className="mb-3 text-[16px] font-semibold text-white">
+          Actividad reciente
+        </h2>
+        <div className="lg overflow-hidden rounded-2xl">
+          {recentActivity.length === 0 ? (
+            <div className="p-6 text-center text-[13px] text-white/55">
+              Sin actividad reciente.
+            </div>
+          ) : (
+            <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+              {recentActivity.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-[14px] text-white">{a.summary}</span>
+                    <Link
+                      href={`/app/projects/${a.project.id}`}
+                      className="text-[12px] text-orange hover:underline"
+                    >
+                      {a.project.name}
+                    </Link>
+                  </div>
+                  <span className="text-[11px] text-white/45">
+                    {a.actor?.name ?? a.actor?.email ?? "Sistema"} ·{" "}
+                    {a.createdAt.toLocaleString("es-CO", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Componentes compartidos ──────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  href,
+  accent,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  accent?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="lg block rounded-2xl p-6 transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
+      style={
+        accent
+          ? {
+              border: "1px solid rgba(232,100,12,0.35)",
+              background:
+                "linear-gradient(180deg, rgba(232,100,12,0.08), transparent 80%)",
+            }
+          : undefined
+      }
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-widest text-white/45">
+        {label}
+      </div>
+      <div
+        className="mt-2 font-heading text-white"
+        style={{ fontSize: 44, lineHeight: 1, letterSpacing: "-1px" }}
+      >
+        {value}
+      </div>
+    </Link>
+  );
+}
+
+function ProjectCard({
+  project,
+  clientView,
+  compact,
+}: {
+  project: {
+    id: string;
+    name: string;
+    code: string;
+    status: ProjectStatus;
+    dueDate: Date | null;
+    clientOrg: { name: string };
+    producerOrg: { name: string };
+  };
+  clientView?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={`/app/projects/${project.id}`}
+      className="lg block rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
+    >
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-mono tracking-wider text-white/45">
+            {project.code}
+          </div>
+          <div className="truncate text-[16px] font-semibold text-white">
+            {project.name}
+          </div>
+        </div>
+        <StatusPill status={project.status} />
+      </div>
+      {!compact && (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-white/55">
+          {!clientView && <span>Cliente: {project.clientOrg.name}</span>}
+          <span>Productora: {project.producerOrg.name}</span>
+          {project.dueDate && (
+            <span>
+              Entrega:{" "}
+              {project.dueDate.toLocaleDateString("es-CO", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { bg: string; color: string }> = {
+    ACTIVE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
+    DRAFT: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
+    ON_HOLD: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
+    COMPLETED: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" },
+    CANCELLED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
+    TODO: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" },
+    DOING: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
+    REVIEW: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
+    DONE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
+    BLOCKED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
+  };
+  const s = map[status] ?? { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" };
+  return (
+    <span
+      className="inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
+      style={{ background: s.bg, color: s.color }}
+    >
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}

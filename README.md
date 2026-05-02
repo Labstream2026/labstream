@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Labstream Studio
 
-## Getting Started
+Plataforma de la productora audiovisual: web pública con CMS + webapp interna para gestión de proyectos, equipos y aprobaciones de cliente.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS 4**
+- **PostgreSQL** + **Prisma** (ORM y migraciones)
+- **NextAuth v5** (credentials, bcrypt, JWT)
+- **Resend** (emails transaccionales — opcional en dev)
+
+## Estructura de la app
+
+| Sección | URL | Para quién |
+|---|---|---|
+| Web pública | `/` , `/servicio` | Visitantes |
+| CMS | `/cms` | Equipo editorial — edita la web pública |
+| Webapp | `/app` | Productores, equipo y clientes — gestión de proyectos |
+
+## Roles
+
+**CMS** (edita la web pública)
+- `SUPER_ADMIN` — todo
+- `EDITOR` — solo páginas asignadas
+- `REVIEWER` — solo lectura / aprueba
+
+**Webapp** (proyectos)
+- `MASTER` (= SUPER_ADMIN) — visión global, asigna productoras a proyectos
+- `PRODUCER` — gestiona sus proyectos, asigna equipo
+- `TEAM` (DIRECTOR, EDITOR, DOP, etc.) — solo proyectos asignados
+- `CLIENT` (CLIENT_LEAD, CLIENT_VIEWER) — ve y aprueba sus proyectos
+
+## Setup local
+
+### Requisitos
+
+- Node 20+
+- PostgreSQL 16 (`brew install postgresql@16` y `brew services start postgresql@16`)
+
+### Pasos
 
 ```bash
+git clone <este-repo>
+cd labstream
+npm install
+
+# 1. Crear BD local
+createdb labstream_dev
+
+# 2. Variables de entorno
+cp .env.example .env
+# Edita .env con tu USER de Postgres y AUTH_SECRET (genera con: openssl rand -base64 32)
+
+# 3. Migrar schema y cargar datos demo
+npx prisma migrate dev
+npm run db:seed
+
+# 4. Arrancar
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Credenciales demo (después del seed)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Rol | Email | Contraseña |
+|---|---|---|
+| Master / Super Admin | `admin@labstream.local` | `Labstream2026!` |
+| Productor (Labstream) | `lucia@labstream.local` | `Demo2026!` |
+| Director | `carlos@labstream.local` | `Demo2026!` |
+| Editora | `ana@labstream.local` | `Demo2026!` |
+| DOP | `javier@labstream.local` | `Demo2026!` |
+| Productora externa | `sofia@productoranorte.com` | `Demo2026!` |
+| Cliente PepsiCo (aprueba) | `marta@pepsico.com` | `Demo2026!` |
+| Cliente PepsiCo (observa) | `ricardo@pepsico.com` | `Demo2026!` |
+| Cliente Bavaria | `elena@bavaria.co` | `Demo2026!` |
 
-## Learn More
+> ⚠️ Cambiar todas las contraseñas en producción.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev         # dev server (puerto 3000)
+npm run build       # build producción
+npm run start       # start producción
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+npm run db:migrate  # crear/aplicar migración
+npm run db:seed     # cargar datos demo
+npm run db:studio   # GUI visual de Postgres (http://localhost:5555)
+npm run db:reset    # reset BD (¡cuidado!)
+```
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Recomendación**: Vercel (Next.js) + Neon (Postgres serverless free) + Resend (email).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push a GitHub
+2. Conecta el repo en [vercel.com](https://vercel.com)
+3. Crea Postgres en [neon.tech](https://neon.tech) (free) → copia la connection string
+4. En Vercel agrega variables:
+   - `DATABASE_URL` (de Neon)
+   - `AUTH_SECRET` (genera con `openssl rand -base64 32`)
+   - `NEXTAUTH_URL` = la URL de Vercel
+   - `AUTH_TRUST_HOST=true`
+   - `RESEND_API_KEY` (opcional — emails)
+5. Después del primer deploy, ejecuta contra la BD de Neon:
+   ```
+   npx prisma migrate deploy
+   npm run db:seed
+   ```
+
+## Variables de entorno
+
+Ver `.env.example` para la lista completa.
+
+| Variable | Requerida | Descripción |
+|---|---|---|
+| `DATABASE_URL` | sí | Postgres connection string |
+| `AUTH_SECRET` | sí | Secret de NextAuth (32+ chars) |
+| `NEXTAUTH_URL` | sí | URL pública del sitio |
+| `RESEND_API_KEY` | no | Para enviar emails reales |
+| `EMAIL_FROM` | no | Remitente de emails |
+| `CONTACT_EMAIL_TO` | no | Destinatario del form de contacto |
+| `MAX_UPLOAD_MB` | no | Tamaño máx upload (default 50) |

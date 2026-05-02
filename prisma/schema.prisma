@@ -1,0 +1,556 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── CMS ─────────────────────────────────────────────────────────
+
+enum CmsRole {
+  SUPER_ADMIN
+  EDITOR
+  REVIEWER
+}
+
+enum PageStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+}
+
+enum AssetSource {
+  UPLOAD
+  URL
+}
+
+// ─── Webapp de proyectos ─────────────────────────────────────────
+
+enum OrgType {
+  CLIENT       // empresa que paga (PepsiCo, etc.)
+  PRODUCER     // productora externa o aliada
+  INTERNAL     // tu propia casa (Labstream)
+}
+
+enum OrgRole {
+  OWNER        // puede aprobar / decidir
+  MEMBER       // puede comentar / ver
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectRole {
+  EXEC_PRODUCER
+  PRODUCER
+  DIRECTOR
+  DOP
+  CAMERA
+  PHOTOGRAPHER
+  EDITOR
+  COLORIST
+  SOUND
+  VFX
+  AI_ARTIST
+  ART_DIRECTOR
+  PRODUCTION_ASSISTANT
+  CLIENT_LEAD          // cliente con poder de aprobar
+  CLIENT_VIEWER        // cliente solo observa
+  OTHER
+}
+
+enum PhaseType {
+  BRIEF
+  PROPOSAL
+  PRE
+  PRODUCTION
+  POST
+  DELIVERY
+  CUSTOM
+}
+
+enum PhaseStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+enum TaskStatus {
+  TODO
+  DOING
+  REVIEW
+  DONE
+  BLOCKED
+}
+
+enum DeliverableKind {
+  TREATMENT
+  SCRIPT
+  STORYBOARD
+  CASTING
+  LOCATION
+  PPM
+  ROUGH_CUT
+  FINE_CUT
+  PICTURE_LOCK
+  COLOR
+  SOUND_MIX
+  MASTER
+  PHOTOSET
+  STREAM_RECORDING
+  OTHER
+}
+
+enum DeliverableStatus {
+  DRAFT             // productor armando
+  INTERNAL_REVIEW   // pendiente pre-aprobación interna
+  CLIENT_REVIEW     // ya enviado al cliente
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+enum ApprovalStage {
+  INTERNAL          // productor / equipo pre-aprueba
+  CLIENT            // cliente da OK final
+}
+
+enum ApprovalDecision {
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+// ─── User (extiende del CMS) ─────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  role          CmsRole   @default(EDITOR)
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String?
+  createdBy     User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers  User[]    @relation("UserCreatedBy")
+
+  // CMS relations
+  pageAssignments  PageAssignment[]
+  pagesUpdated     Page[]    @relation("PageUpdatedBy")
+  blocksUpdated    Block[]   @relation("BlockUpdatedBy")
+  assetsUploaded   Asset[]
+  sessions         Session[]
+
+  // Webapp relations
+  orgMemberships     OrgMember[]
+  projectMemberships ProjectMember[]
+  projectsCreated    Project[]            @relation("ProjectCreatedBy")
+  taskAssignments    TaskAssignee[]
+  versionsSubmitted  DeliverableVersion[]
+  approvalsGiven     Approval[]
+  commentsAuthored   Comment[]
+  activityActor      ActivityLog[]        @relation("ActivityActor")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── CMS models (sin cambios) ────────────────────────────────────
+
+model Page {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  description String?
+  status      PageStatus @default(DRAFT)
+  isHome      Boolean    @default(false)
+  order       Int        @default(0)
+  metaTitle   String?
+  metaDesc    String?
+  ogImageId   String?
+  ogImage     Asset?     @relation("PageOgImage", fields: [ogImageId], references: [id])
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  updatedById String?
+  updatedBy   User?      @relation("PageUpdatedBy", fields: [updatedById], references: [id])
+
+  blocks      Block[]
+  assignments PageAssignment[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+model PageAssignment {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  canEdit   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId])
+}
+
+model Block {
+  id          String   @id @default(cuid())
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type        String
+  order       Int      @default(0)
+  data        Json
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?    @relation("BlockUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([pageId, order])
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  source      AssetSource
+  filename    String?
+  mimeType    String?
+  sizeBytes   Int?
+  url         String
+  alt         String?
+  width       Int?
+  height      Int?
+  uploadedById String?
+  uploadedBy   User?      @relation(fields: [uploadedById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  pageOgImages       Page[]               @relation("PageOgImage")
+  servicesCover      Service[]            @relation("ServiceCover")
+  versionsAttached   DeliverableVersion[]
+
+  @@index([source])
+  @@index([uploadedById])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String?
+  content     String?
+  order       Int      @default(0)
+  visible     Boolean  @default(true)
+  coverId     String?
+  cover       Asset?   @relation("ServiceCover", fields: [coverId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([visible, order])
+}
+
+model MenuItem {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  location  String   @default("header")
+  order     Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([location, order])
+}
+
+model SiteSettings {
+  id           String   @id @default("singleton")
+  siteName     String   @default("Labstream Studio")
+  tagline      String?
+  logoUrl      String?
+  contactEmail String?
+  socials      Json?
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Webapp: Organizations ───────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  type      OrgType
+  logoUrl   String?
+  website   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members          OrgMember[]
+  clientProjects   Project[]   @relation("ClientOrg")
+  producerProjects Project[]   @relation("ProducerOrg")
+
+  @@index([type])
+  @@index([name])
+}
+
+model OrgMember {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgRole   OrgRole  @default(MEMBER)
+  title     String?  // ej "Brand Manager", "Productora ejecutiva"
+  createdAt DateTime @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
+}
+
+// ─── Webapp: Projects ────────────────────────────────────────────
+
+model Project {
+  id            String        @id @default(cuid())
+  code          String        @unique         // ej PEPSI-2026-AGRO
+  name          String
+  description   String?
+  status        ProjectStatus @default(DRAFT)
+  startDate     DateTime?
+  dueDate       DateTime?
+  budget        Decimal?
+
+  clientOrgId   String
+  clientOrg     Organization @relation("ClientOrg", fields: [clientOrgId], references: [id])
+  producerOrgId String
+  producerOrg   Organization @relation("ProducerOrg", fields: [producerOrgId], references: [id])
+
+  templateId    String?
+  template      ProjectTemplate? @relation(fields: [templateId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String?
+  createdBy     User?     @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+
+  members       ProjectMember[]
+  phases        Phase[]
+  deliverables  Deliverable[]
+  activity      ActivityLog[]
+
+  @@index([clientOrgId])
+  @@index([producerOrgId])
+  @@index([status])
+}
+
+model ProjectMember {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectRole  ProjectRole
+  createdAt    DateTime @default(now())
+
+  @@unique([projectId, userId, projectRole])
+  @@index([userId])
+}
+
+// ─── Templates ───────────────────────────────────────────────────
+
+model ProjectTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  phases    TemplatePhase[]
+  projects  Project[]
+}
+
+model TemplatePhase {
+  id          String   @id @default(cuid())
+  templateId  String
+  template    ProjectTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  type        PhaseType
+  name        String
+  order       Int
+
+  tasks  TemplateTask[]
+
+  @@index([templateId, order])
+}
+
+model TemplateTask {
+  id        String   @id @default(cuid())
+  phaseId   String
+  phase     TemplatePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  title     String
+  defaultRole ProjectRole?
+  order     Int
+
+  @@index([phaseId, order])
+}
+
+// ─── Phases & Tasks ──────────────────────────────────────────────
+
+model Phase {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      PhaseType
+  name      String
+  order     Int
+  status    PhaseStatus @default(PENDING)
+  startDate DateTime?
+  dueDate   DateTime?
+
+  tasks         Task[]
+  deliverables  Deliverable[]
+
+  @@index([projectId, order])
+}
+
+model Task {
+  id        String     @id @default(cuid())
+  phaseId   String
+  phase     Phase      @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  title     String
+  description String?
+  status    TaskStatus @default(TODO)
+  order     Int        @default(0)
+  dueDate   DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  assignees TaskAssignee[]
+
+  @@index([phaseId, order])
+  @@index([phaseId, status])
+}
+
+model TaskAssignee {
+  id      String  @id @default(cuid())
+  taskId  String
+  task    Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([userId])
+}
+
+// ─── Deliverables (versionados) ──────────────────────────────────
+
+model Deliverable {
+  id            String            @id @default(cuid())
+  projectId     String
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phaseId       String?
+  phase         Phase?            @relation(fields: [phaseId], references: [id])
+  kind          DeliverableKind
+  title         String
+  description   String?
+  status        DeliverableStatus @default(DRAFT)
+
+  currentVersionId String?       @unique
+  currentVersion   DeliverableVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  versions  DeliverableVersion[] @relation("DeliverableVersions")
+  approvals Approval[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model DeliverableVersion {
+  id            String   @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable @relation("DeliverableVersions", fields: [deliverableId], references: [id], onDelete: Cascade)
+  versionNumber Int
+
+  // Una de las dos: link externo (Drive, Synology share, Vimeo) O archivo subido
+  externalUrl   String?
+  assetId       String?
+  asset         Asset?   @relation(fields: [assetId], references: [id])
+
+  notes         String?  // qué cambió en esta versión
+  submittedById String
+  submittedBy   User     @relation(fields: [submittedById], references: [id])
+  submittedAt   DateTime @default(now())
+
+  isCurrent  Deliverable? @relation("CurrentVersion")
+  comments   Comment[]
+  approvals  Approval[]
+
+  @@unique([deliverableId, versionNumber])
+}
+
+model Approval {
+  id            String           @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable      @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  versionId     String
+  version       DeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  stage         ApprovalStage
+  decision      ApprovalDecision
+  comment       String?
+  decidedById   String
+  decidedBy     User             @relation(fields: [decidedById], references: [id])
+  decidedAt     DateTime         @default(now())
+
+  @@index([deliverableId])
+  @@index([versionId])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  versionId     String
+  version       DeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id])
+  body          String
+  timecodeSeconds Int?   // reservado para fase 2.4 (comentarios con timecode)
+  createdAt     DateTime @default(now())
+
+  @@index([versionId, createdAt])
+}
+
+// ─── Audit / Activity ────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation("ActivityActor", fields: [actorId], references: [id])
+  type      String   // PROJECT_CREATED | MEMBER_ADDED | DELIVERABLE_SUBMITTED | APPROVED | …
+  summary   String   // human readable
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+}
