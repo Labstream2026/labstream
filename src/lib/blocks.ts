@@ -5,6 +5,7 @@ export const BLOCK_TYPES = [
   "stats",
   "richText",
   "gallery",
+  "carousel",
   "videoEmbed",
   "cta",
   "featureList",
@@ -88,6 +89,26 @@ export const blockSchemas = {
     caption: z.string().optional().default(""),
     fullWidth: z.boolean().default(false),
   }),
+
+  carousel: z.object({
+    eyebrow: z.string().optional().default(""),
+    heading: z.string().optional().default(""),
+    slides: z
+      .array(
+        z.object({
+          url: z.string().url(),
+          alt: z.string().optional().default(""),
+          caption: z.string().optional().default(""),
+          linkHref: z.string().optional().default(""),
+        }),
+      )
+      .default([]),
+    autoplay: z.boolean().default(true),
+    intervalSeconds: z.number().int().min(2).max(20).default(5),
+    loop: z.boolean().default(true),
+    indicators: z.boolean().default(true),
+    aspectRatio: z.enum(["16/9", "4/3", "1/1", "21/9"]).default("16/9"),
+  }),
 };
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
@@ -95,6 +116,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   stats: "Estadísticas",
   richText: "Texto enriquecido",
   gallery: "Galería de imágenes",
+  carousel: "Carrusel",
   videoEmbed: "Video embed",
   cta: "Llamada a la acción",
   featureList: "Lista de características",
@@ -106,6 +128,7 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   stats: "Tarjetas con números destacados",
   richText: "Párrafos de texto con encabezado opcional",
   gallery: "Cuadrícula de imágenes con leyendas",
+  carousel: "Imágenes que rotan automáticamente",
   videoEmbed: "Video de YouTube o Vimeo",
   cta: "Banner con título y botón principal",
   featureList: "Lista de items con título y descripción",
@@ -168,6 +191,16 @@ export const BLOCK_DEFAULTS: Record<BlockType, Record<string, unknown>> = {
     alt: "",
     caption: "",
     fullWidth: false,
+  },
+  carousel: {
+    eyebrow: "",
+    heading: "",
+    slides: [],
+    autoplay: true,
+    intervalSeconds: 5,
+    loop: true,
+    indicators: true,
+    aspectRatio: "16/9",
   },
 };
 

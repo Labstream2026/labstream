@@ -19,6 +19,7 @@ import {
   STATUS_LABELS,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
+import { detectEmbedKind } from "@/lib/google-drive";
 
 async function updateTaskStatus(formData: FormData) {
   "use server";
@@ -134,11 +135,15 @@ async function createDeliverable(formData: FormData) {
   });
 
   if (externalUrl) {
+    const detected = detectEmbedKind(externalUrl);
     const v = await prisma.deliverableVersion.create({
       data: {
         deliverableId: deliverable.id,
         versionNumber: 1,
         externalUrl,
+        embedKind: detected.kind,
+        driveFolderId: detected.folderId ?? null,
+        driveFileId: detected.fileId ?? null,
         notes,
         submittedById: me.id,
       },
@@ -393,7 +398,7 @@ export default async function ProjectDetailPage(props: {
                 </select>
                 <input
                   name="externalUrl"
-                  placeholder="Link (Google Drive, Synology, Vimeo...) — opcional"
+                  placeholder="Carpeta Drive · file Drive · Vimeo · YouTube · MP4 — opcional"
                   className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white md:col-span-1"
                 />
                 <input

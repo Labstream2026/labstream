@@ -141,6 +141,32 @@ async function saveBlock(formData: FormData) {
       };
       break;
     }
+    case "carousel": {
+      const count = parseInt(String(formData.get("slide_count") ?? "0"), 10);
+      const slides: { url: string; alt: string; caption: string; linkHref: string }[] = [];
+      for (let i = 0; i < count; i++) {
+        const url = String(formData.get(`slide_${i}_url`) ?? "").trim();
+        if (!url) continue;
+        slides.push({
+          url,
+          alt: String(formData.get(`slide_${i}_alt`) ?? "").trim(),
+          caption: String(formData.get(`slide_${i}_caption`) ?? "").trim(),
+          linkHref: String(formData.get(`slide_${i}_linkHref`) ?? "").trim(),
+        });
+      }
+      const interval = parseInt(String(formData.get("intervalSeconds") ?? "5"), 10);
+      nextData = {
+        eyebrow: String(formData.get("eyebrow") ?? ""),
+        heading: String(formData.get("heading") ?? ""),
+        slides,
+        autoplay: formData.get("autoplay") === "on",
+        intervalSeconds: Number.isFinite(interval) ? Math.min(Math.max(interval, 2), 20) : 5,
+        loop: formData.get("loop") === "on",
+        indicators: formData.get("indicators") === "on",
+        aspectRatio: String(formData.get("aspectRatio") ?? "16/9"),
+      };
+      break;
+    }
   }
 
   await prisma.block.update({

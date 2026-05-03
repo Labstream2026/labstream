@@ -1,35 +1,13 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { join, extname } from "node:path";
-import { randomBytes } from "node:crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AssetSource } from "@prisma/client";
-
-const UPLOADS_DIR =
-  process.env.UPLOADS_DIR ?? join(process.cwd(), "public", "uploads");
-const PUBLIC_PATH = process.env.PUBLIC_UPLOADS_PATH ?? "/uploads";
-const MAX_BYTES = parseInt(process.env.MAX_UPLOAD_MB ?? "50", 10) * 1024 * 1024;
-
-const ALLOWED_MIME = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-  "image/gif",
-  "image/svg+xml",
-  "video/mp4",
-  "video/quicktime",
-  "video/webm",
-  "application/pdf",
-]);
-
-function safeFilename(originalName: string) {
-  const ext = extname(originalName).toLowerCase().replace(/[^a-z0-9.]+/g, "");
-  const base = randomBytes(16).toString("hex");
-  return `${base}${ext}`;
-}
+import {
+  uploadFile,
+  isBlobConfigured,
+  ALLOWED_MIME,
+  MAX_BYTES,
+} from "@/lib/blob-storage";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -48,46 +26,66 @@ export async function POST(req: Request) {
 
   const file = formData.get("file");
   const alt = String(formData.get("alt") ?? "").trim() || null;
+  const isJsonResponse = formData.get("json") === "1";
 
   if (!(file instanceof File)) {
-    return NextResponse.redirect(
-      new URL("/cms/assets?error=upload_failed", req.url),
-    );
+    return isJsonResponse
+      ? NextResponse.json({ ok: false, error: "no_file" }, { status: 400 })
+      : NextResponse.redirect(
+          new URL("/cms/assets?error=upload_failed", req.url),
+        );
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.redirect(
-      new URL("/cms/assets?error=upload_failed", req.url),
-    );
+    return isJsonResponse
+      ? NextResponse.json({ ok: false, error: "too_large" }, { status: 400 })
+      : NextResponse.redirect(
+          new URL("/cms/assets?error=upload_failed", req.url),
+        );
   }
 
   const mime = file.type || "application/octet-stream";
   if (!ALLOWED_MIME.has(mime)) {
-    return NextResponse.redirect(
-      new URL("/cms/assets?error=upload_failed", req.url),
-    );
+    return isJsonResponse
+      ? NextResponse.json({ ok: false, error: "bad_type" }, { status: 400 })
+      : NextResponse.redirect(
+          new URL("/cms/assets?error=upload_failed", req.url),
+        );
   }
 
-  if (!existsSync(UPLOADS_DIR)) {
-    await mkdir(UPLOADS_DIR, { recursive: true });
-  }
+  const stored = await uploadFile({
+    file,
+    filename: file.name,
+    prefix: "uploads",
+  });
 
-  const filename = safeFilename(file.name);
-  const targetPath = join(UPLOADS_DIR, filename);
-  const buf = Buffer.from(await file.arrayBuffer());
-  await writeFile(targetPath, buf);
-
-  await prisma.asset.create({
+  const asset = await prisma.asset.create({
     data: {
       source: AssetSource.UPLOAD,
       filename: file.name,
       mimeType: mime,
       sizeBytes: file.size,
-      url: `${PUBLIC_PATH}/${filename}`,
+      url: stored.url,
+      storage: stored.storage,
+      blobPath: stored.storage === "blob" ? stored.pathname : null,
       alt,
       uploadedById: session.user.id,
     },
   });
+
+  if (isJsonResponse) {
+    return NextResponse.json({
+      ok: true,
+      asset: {
+        id: asset.id,
+        url: asset.url,
+        filename: asset.filename,
+        mimeType: asset.mimeType,
+        sizeBytes: asset.sizeBytes,
+      },
+      storageMode: isBlobConfigured() ? "blob" : "local",
+    });
+  }
 
   return NextResponse.redirect(
     new URL("/cms/assets?ok=uploaded", req.url),

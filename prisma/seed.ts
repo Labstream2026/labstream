@@ -13,6 +13,7 @@ import {
   DeliverableStatus,
   ApprovalStage,
   ApprovalDecision,
+  EmbedKind,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -698,6 +699,112 @@ async function seedWebapp() {
         body: "+1, también la música del cierre se siente baja.",
       },
     ],
+  });
+
+  // ─── Demo: 3 entregables con links reales de Google Drive ────
+  const photosDeliverable = await prisma.deliverable.create({
+    data: {
+      projectId: p1.id,
+      kind: DeliverableKind.PHOTOSET,
+      title: "Sesión fotográfica · Demo Drive",
+      description: "Galería de fotos en una carpeta de Google Drive — cliente puede ver, seleccionar y descargar",
+      status: DeliverableStatus.CLIENT_REVIEW,
+    },
+  });
+  const photosV1 = await prisma.deliverableVersion.create({
+    data: {
+      deliverableId: photosDeliverable.id,
+      versionNumber: 1,
+      externalUrl: "https://drive.google.com/drive/folders/181DMwVu8GaR3pjA_RVamv1kIq9YE920a?usp=sharing",
+      embedKind: EmbedKind.DRIVE_FOLDER_PHOTOS,
+      driveFolderId: "181DMwVu8GaR3pjA_RVamv1kIq9YE920a",
+      notes: "Selectos finales de la sesión. Aprobar y descargar las que vayan a campaña.",
+      submittedById: javier.id,
+    },
+  });
+  await prisma.deliverable.update({
+    where: { id: photosDeliverable.id },
+    data: { currentVersionId: photosV1.id },
+  });
+  await prisma.approval.create({
+    data: {
+      deliverableId: photosDeliverable.id,
+      versionId: photosV1.id,
+      stage: ApprovalStage.INTERNAL,
+      decision: ApprovalDecision.APPROVED,
+      comment: "Selección aprobada, listo para cliente",
+      decidedById: lucia.id,
+    },
+  });
+
+  const videoDeliverable = await prisma.deliverable.create({
+    data: {
+      projectId: p1.id,
+      kind: DeliverableKind.MASTER,
+      title: "Master final · Demo video Drive (1 archivo)",
+      description: "Video master en Drive — el más usado por la productora",
+      status: DeliverableStatus.CLIENT_REVIEW,
+    },
+  });
+  const videoV1 = await prisma.deliverableVersion.create({
+    data: {
+      deliverableId: videoDeliverable.id,
+      versionNumber: 1,
+      externalUrl: "https://drive.google.com/file/d/1TC5IXPgNsoUreb4E4NKSGMrd6BXhMt8u/view?usp=sharing",
+      embedKind: EmbedKind.DRIVE_FILE,
+      driveFileId: "1TC5IXPgNsoUreb4E4NKSGMrd6BXhMt8u",
+      notes: "Master listo. Reproducir directo en la app, sin descargar.",
+      submittedById: ana.id,
+    },
+  });
+  await prisma.deliverable.update({
+    where: { id: videoDeliverable.id },
+    data: { currentVersionId: videoV1.id },
+  });
+  await prisma.approval.create({
+    data: {
+      deliverableId: videoDeliverable.id,
+      versionId: videoV1.id,
+      stage: ApprovalStage.INTERNAL,
+      decision: ApprovalDecision.APPROVED,
+      comment: "Pre-aprobado",
+      decidedById: lucia.id,
+    },
+  });
+
+  const videosDeliverable = await prisma.deliverable.create({
+    data: {
+      projectId: p1.id,
+      kind: DeliverableKind.OTHER,
+      title: "Cortes para redes · Demo carpeta videos",
+      description: "Carpeta con varios videos — cliente reproduce cada uno y descarga si quiere",
+      status: DeliverableStatus.CLIENT_REVIEW,
+    },
+  });
+  const videosV1 = await prisma.deliverableVersion.create({
+    data: {
+      deliverableId: videosDeliverable.id,
+      versionNumber: 1,
+      externalUrl: "https://drive.google.com/drive/u/0/folders/1I1kRnLd4aovWhfLnW_rJ-eh4Fz7QtucS",
+      embedKind: EmbedKind.DRIVE_FOLDER_VIDEOS,
+      driveFolderId: "1I1kRnLd4aovWhfLnW_rJ-eh4Fz7QtucS",
+      notes: "3 cortes para Reels / TikTok / YouTube Shorts.",
+      submittedById: ana.id,
+    },
+  });
+  await prisma.deliverable.update({
+    where: { id: videosDeliverable.id },
+    data: { currentVersionId: videosV1.id },
+  });
+  await prisma.approval.create({
+    data: {
+      deliverableId: videosDeliverable.id,
+      versionId: videosV1.id,
+      stage: ApprovalStage.INTERNAL,
+      decision: ApprovalDecision.APPROVED,
+      comment: "Pre-aprobado para revisión cliente",
+      decidedById: lucia.id,
+    },
   });
 
   // ─── Proyecto 2: PepsiCo Refresh · gestionado por Productora Norte ────

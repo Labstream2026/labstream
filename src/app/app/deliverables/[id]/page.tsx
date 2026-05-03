@@ -16,6 +16,20 @@ import {
   STATUS_LABELS,
 } from "@/lib/app-guards";
 import { sendEmail, escapeHtml } from "@/lib/email";
+import {
+  detectEmbedKind,
+  driveFilePreviewIframeUrl,
+  vimeoEmbedUrl,
+  youtubeEmbedUrl,
+  extractVimeoId,
+  extractYouTubeId,
+  listFolder,
+  makeSnapshot,
+  diffSnapshots,
+  type DriveSnapshot,
+} from "@/lib/google-drive";
+import { DriveFolderViewer } from "@/components/app/DriveFolderViewer";
+import { EmbedKind } from "@prisma/client";
 
 async function submitVersion(formData: FormData) {
   "use server";
@@ -40,12 +54,16 @@ async function submitVersion(formData: FormData) {
   if (!canManage) redirect(`/app/deliverables/${deliverableId}?denied=1`);
 
   const nextNumber = (deliverable.versions[0]?.versionNumber ?? 0) + 1;
+  const detected = detectEmbedKind(externalUrl);
 
   const v = await prisma.deliverableVersion.create({
     data: {
       deliverableId,
       versionNumber: nextNumber,
       externalUrl,
+      embedKind: detected.kind,
+      driveFolderId: detected.folderId ?? null,
+      driveFileId: detected.fileId ?? null,
       notes,
       submittedById: me.id,
     },
@@ -232,6 +250,106 @@ async function approveAsClient(formData: FormData) {
   revalidatePath("/app");
 }
 
+async function checkAndNotify(formData: FormData) {
+  "use server";
+  const me = await requireAppUser();
+  const versionId = String(formData.get("versionId") ?? "");
+
+  const version = await prisma.deliverableVersion.findUnique({
+    where: { id: versionId },
+    include: {
+      deliverable: {
+        include: { project: { include: { clientOrg: true } } },
+      },
+    },
+  });
+  if (!version) return;
+
+  const canManage = await canApproveInternal(
+    me.id,
+    me.role,
+    version.deliverable.projectId,
+  );
+  if (!canManage) return;
+
+  let summary = "Nueva versión disponible para revisar.";
+  let hasChanges = false;
+
+  // Si es Drive folder, comparar snapshot
+  if (version.driveFolderId) {
+    const listing = await listFolder(version.driveFolderId);
+    const newSnapshot = makeSnapshot(listing.files);
+    const prev = version.driveSnapshotJson as unknown as DriveSnapshot | null;
+    const diff = diffSnapshots(prev, newSnapshot);
+    hasChanges = diff.hasChanges;
+
+    await prisma.deliverableVersion.update({
+      where: { id: versionId },
+      data: {
+        driveLastCheckedAt: listing.fetchedAt,
+        driveFileCount: listing.files.length,
+        driveSnapshotJson: newSnapshot as unknown as object,
+      },
+    });
+
+    if (hasChanges) {
+      const parts: string[] = [];
+      if (diff.added.length) parts.push(`${diff.added.length} archivo(s) nuevos`);
+      if (diff.modified.length)
+        parts.push(`${diff.modified.length} archivo(s) modificado(s)`);
+      if (diff.removed.length)
+        parts.push(`${diff.removed.length} archivo(s) removidos`);
+      summary = parts.join(" · ");
+    }
+  } else {
+    // Para no-Drive, asumimos que el productor sabe que hay cambios
+    hasChanges = true;
+  }
+
+  if (!hasChanges) {
+    await prisma.activityLog.create({
+      data: {
+        projectId: version.deliverable.projectId,
+        actorId: me.id,
+        type: "DRIVE_NO_CHANGES",
+        summary: `Sin cambios detectados en "${version.deliverable.title}"`,
+      },
+    });
+    revalidatePath(`/app/deliverables/${version.deliverableId}`);
+    return;
+  }
+
+  // Mandar email a la org cliente
+  const clientMembers = await prisma.orgMember.findMany({
+    where: { orgId: version.deliverable.project.clientOrgId },
+    include: { user: true },
+  });
+  const recipients = clientMembers.map((c) => c.user.email).filter(Boolean);
+
+  if (recipients.length > 0) {
+    await sendEmail({
+      to: recipients,
+      subject: `Nueva versión: ${version.deliverable.title} — ${version.deliverable.project.name}`,
+      html: clientNotificationHtml({
+        projectName: version.deliverable.project.name,
+        deliverableTitle: `${version.deliverable.title} (${summary})`,
+        link: `${process.env.NEXTAUTH_URL ?? ""}/app/deliverables/${version.deliverableId}`,
+      }),
+    });
+  }
+
+  await prisma.activityLog.create({
+    data: {
+      projectId: version.deliverable.projectId,
+      actorId: me.id,
+      type: "NEW_VERSION_NOTIFIED",
+      summary: `Notificación enviada al cliente: ${summary}`,
+    },
+  });
+
+  revalidatePath(`/app/deliverables/${version.deliverableId}`);
+}
+
 async function postComment(formData: FormData) {
   "use server";
   const me = await requireAppUser();
@@ -385,22 +503,17 @@ export default async function DeliverableReviewPage(props: {
                     </div>
                   </div>
 
-                  {selectedVersion.externalUrl ? (
+                  <VersionEmbed version={selectedVersion} />
+
+                  {selectedVersion.externalUrl && (
                     <a
                       href={selectedVersion.externalUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="lg-strong block rounded-xl px-4 py-4 text-[14px] text-white hover:bg-white/[0.09]"
+                      className="mt-3 inline-block text-[12px] text-orange hover:underline"
                     >
-                      Abrir material ↗
-                      <div className="mt-1 truncate text-[11px] text-white/50">
-                        {selectedVersion.externalUrl}
-                      </div>
+                      Abrir en {selectedVersion.embedKind?.toString().includes("DRIVE") ? "Google Drive" : "ventana nueva"} ↗
                     </a>
-                  ) : (
-                    <p className="text-[13px] text-white/55">
-                      Esta versión no tiene material adjunto.
-                    </p>
                   )}
 
                   {selectedVersion.notes && (
@@ -539,6 +652,38 @@ export default async function DeliverableReviewPage(props: {
           </section>
 
           <aside className="flex flex-col gap-4">
+            {canManage && selectedVersion && selectedVersion.driveFolderId && (
+              <form
+                action={checkAndNotify}
+                className="lg flex flex-col gap-2 rounded-2xl p-4"
+                style={{
+                  border: "1px solid rgba(34,197,94,0.25)",
+                  background: "linear-gradient(180deg, rgba(34,197,94,0.05), transparent 80%)",
+                }}
+              >
+                <h3 className="text-[13px] font-semibold text-white">
+                  📨 Notificar nueva versión
+                </h3>
+                <p className="text-[11px] text-white/60">
+                  Si subiste cambios al Drive, esto compara y notifica al cliente
+                  por email con el resumen de qué cambió.
+                </p>
+                <input type="hidden" name="versionId" value={selectedVersion.id} />
+                <button
+                  type="submit"
+                  className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-[12px] font-medium text-green-300 hover:bg-green-500/20"
+                >
+                  Verificar Drive y notificar
+                </button>
+                {selectedVersion.driveLastCheckedAt && (
+                  <p className="text-[10px] text-white/40">
+                    Última verificación:{" "}
+                    {selectedVersion.driveLastCheckedAt.toLocaleString("es-CO")}
+                  </p>
+                )}
+              </form>
+            )}
+
             {canManage && (
               <form
                 action={submitVersion}
@@ -551,9 +696,13 @@ export default async function DeliverableReviewPage(props: {
                 <input
                   required
                   name="externalUrl"
-                  placeholder="Link (Drive, Synology, Vimeo…)"
+                  placeholder="Carpeta Drive · file Drive · Vimeo · YouTube · MP4…"
                   className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
                 />
+                <p className="text-[11px] text-white/45">
+                  Detección automática del tipo. Carpetas Drive permiten ver
+                  galería + descarga selectiva al cliente.
+                </p>
                 <textarea
                   name="notes"
                   rows={2}
@@ -731,6 +880,129 @@ function DeliverableStatusPill({ status }: { status: DeliverableStatus }) {
     >
       {STATUS_LABELS[status] ?? status}
     </span>
+  );
+}
+
+function VersionEmbed({
+  version,
+}: {
+  version: {
+    id: string;
+    externalUrl: string | null;
+    embedKind: EmbedKind;
+    driveFolderId: string | null;
+    driveFileId: string | null;
+  };
+}) {
+  if (!version.externalUrl) {
+    return (
+      <p className="text-[13px] text-white/55">
+        Esta versión no tiene material adjunto.
+      </p>
+    );
+  }
+
+  // Carpeta Drive (fotos / videos / mixto)
+  if (
+    version.driveFolderId &&
+    (version.embedKind === EmbedKind.DRIVE_FOLDER_PHOTOS ||
+      version.embedKind === EmbedKind.DRIVE_FOLDER_VIDEOS ||
+      version.embedKind === EmbedKind.DRIVE_FOLDER_MIXED)
+  ) {
+    return (
+      <DriveFolderViewer
+        versionId={version.id}
+        folderId={version.driveFolderId}
+      />
+    );
+  }
+
+  // Archivo individual de Drive (video con preview)
+  if (version.driveFileId && version.embedKind === EmbedKind.DRIVE_FILE) {
+    return (
+      <div className="overflow-hidden rounded-2xl">
+        <iframe
+          src={driveFilePreviewIframeUrl(version.driveFileId)}
+          className="aspect-video w-full bg-black"
+          allow="autoplay"
+          title="Drive video"
+        />
+      </div>
+    );
+  }
+
+  // Vimeo
+  if (version.embedKind === EmbedKind.VIMEO) {
+    const id = extractVimeoId(version.externalUrl);
+    if (id) {
+      return (
+        <div className="overflow-hidden rounded-2xl">
+          <iframe
+            src={vimeoEmbedUrl(id)}
+            className="aspect-video w-full bg-black"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            title="Vimeo"
+          />
+        </div>
+      );
+    }
+  }
+
+  // YouTube
+  if (version.embedKind === EmbedKind.YOUTUBE) {
+    const id = extractYouTubeId(version.externalUrl);
+    if (id) {
+      return (
+        <div className="overflow-hidden rounded-2xl">
+          <iframe
+            src={youtubeEmbedUrl(id)}
+            className="aspect-video w-full bg-black"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            title="YouTube"
+          />
+        </div>
+      );
+    }
+  }
+
+  // Video directo .mp4
+  if (version.embedKind === EmbedKind.DIRECT_VIDEO) {
+    return (
+      <video
+        src={version.externalUrl}
+        controls
+        className="aspect-video w-full rounded-2xl bg-black"
+      />
+    );
+  }
+
+  // Imagen directa
+  if (version.embedKind === EmbedKind.IMAGE) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={version.externalUrl}
+        alt="Material"
+        className="w-full rounded-2xl"
+      />
+    );
+  }
+
+  // Default: link externo plano
+  return (
+    <a
+      href={version.externalUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="lg-strong block rounded-xl px-4 py-4 text-[14px] text-white hover:bg-white/[0.09]"
+    >
+      Abrir material ↗
+      <div className="mt-1 truncate text-[11px] text-white/50">
+        {version.externalUrl}
+      </div>
+    </a>
   );
 }
 

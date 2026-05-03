@@ -22,8 +22,21 @@ enum PageStatus {
 }
 
 enum AssetSource {
-  UPLOAD
-  URL
+  UPLOAD     // Archivo subido a nuestro storage (Vercel Blob o local)
+  URL        // URL externa pegada (Vimeo, Drive público, S3 cliente, etc.)
+}
+
+enum EmbedKind {
+  NONE                 // No es embed (PDF, otro tipo)
+  IMAGE                // Imagen estándar
+  DRIVE_FILE           // Archivo individual de Google Drive (video por preview)
+  DRIVE_FOLDER_PHOTOS  // Carpeta de Drive con fotos (visor con multi-select)
+  DRIVE_FOLDER_VIDEOS  // Carpeta de Drive con videos (lista de players)
+  DRIVE_FOLDER_MIXED   // Carpeta de Drive mixta
+  VIMEO                // Video de Vimeo
+  YOUTUBE              // Video de YouTube
+  DIRECT_VIDEO         // .mp4 directo
+  EXTERNAL_LINK        // URL externa genérica
 }
 
 // ─── Webapp de proyectos ─────────────────────────────────────────
@@ -236,10 +249,14 @@ model Asset {
   filename    String?
   mimeType    String?
   sizeBytes   Int?
-  url         String
+  url         String              // URL pública final (Blob, local /uploads, o external)
+  thumbnailUrl String?            // URL de thumbnail si aplica (Drive, Vimeo, etc.)
   alt         String?
+  caption     String?
   width       Int?
   height      Int?
+  storage     String   @default("local")  // "blob" | "local" | "external"
+  blobPath    String?            // path en Vercel Blob para poder borrar después
   uploadedById String?
   uploadedBy   User?      @relation(fields: [uploadedById], references: [id])
   createdAt   DateTime    @default(now())
@@ -250,6 +267,7 @@ model Asset {
 
   @@index([source])
   @@index([uploadedById])
+  @@index([createdAt])
 }
 
 model Service {
@@ -492,10 +510,22 @@ model DeliverableVersion {
   deliverable   Deliverable @relation("DeliverableVersions", fields: [deliverableId], references: [id], onDelete: Cascade)
   versionNumber Int
 
-  // Una de las dos: link externo (Drive, Synology share, Vimeo) O archivo subido
+  // Una de tres: link externo, archivo subido (asset), o snapshot Drive
   externalUrl   String?
   assetId       String?
   asset         Asset?   @relation(fields: [assetId], references: [id])
+
+  // Detección de tipo de embed para renderizar el visor correcto
+  embedKind     EmbedKind @default(NONE)
+
+  // Para Drive — extraídos del externalUrl (carpeta o file individual)
+  driveFolderId String?
+  driveFileId   String?
+
+  // Snapshot de la última lectura de la carpeta Drive (para detectar cambios)
+  driveLastCheckedAt DateTime?
+  driveFileCount     Int?
+  driveSnapshotJson  Json?     // [{ id, name, mimeType, modifiedTime }, ...]
 
   notes         String?  // qué cambió en esta versión
   submittedById String
@@ -507,6 +537,7 @@ model DeliverableVersion {
   approvals  Approval[]
 
   @@unique([deliverableId, versionNumber])
+  @@index([driveFolderId])
 }
 
 model Approval {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { BlockType } from "@/lib/blocks";
+import { AssetPicker } from "@/components/cms/AssetPicker";
 
 type BaseProps = {
   blockId: string;
@@ -32,6 +33,8 @@ export function BlockForm(props: Props) {
       return <FeatureListForm {...props} />;
     case "image":
       return <ImageForm {...props} />;
+    case "carousel":
+      return <CarouselForm {...props} />;
     default:
       return (
         <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/30 p-4 text-[12px] text-white/70">
@@ -215,6 +218,7 @@ function GalleryForm(props: Props) {
   const initial =
     (props.data.images as { url: string; alt?: string; caption?: string }[]) ?? [];
   const [images, setImages] = useState(initial);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const cols = (props.data.columns as number) ?? 3;
 
   return (
@@ -241,23 +245,28 @@ function GalleryForm(props: Props) {
           </span>
           <button
             type="button"
-            onClick={() =>
-              setImages([...images, { url: "", alt: "", caption: "" }])
-            }
-            className="rounded-md border border-white/10 px-2.5 py-1 text-[12px] text-white/80 hover:bg-white/5"
+            onClick={() => setPickerOpen(true)}
+            className="rounded-md border border-orange/40 bg-orange/10 px-2.5 py-1 text-[12px] font-medium text-orange hover:bg-orange/20"
           >
-            + Agregar imagen
+            + Elegir de biblioteca
           </button>
         </div>
         {images.map((img, i) => (
           <div
             key={i}
-            className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 md:grid-cols-[2fr_1fr_1fr_auto]"
+            className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 md:grid-cols-[80px_2fr_1fr_1fr_auto]"
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={img.url}
+              alt={img.alt ?? ""}
+              className="hidden md:block aspect-square rounded-md object-cover"
+              referrerPolicy="no-referrer"
+            />
             <input
               name={`img_${i}_url`}
               defaultValue={img.url}
-              placeholder="URL de la imagen (sube en /cms/assets primero)"
+              placeholder="URL"
               className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
             />
             <input
@@ -283,6 +292,165 @@ function GalleryForm(props: Props) {
         ))}
         <input type="hidden" name="image_count" value={images.length} />
       </div>
+
+      <AssetPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(asset) => {
+          setImages([...images, { url: asset.url, alt: asset.alt ?? "", caption: "" }]);
+        }}
+        filter="image"
+        multi
+        onPickMulti={(picked) => {
+          setImages([
+            ...images,
+            ...picked.map((p) => ({ url: p.url, alt: p.alt ?? "", caption: "" })),
+          ]);
+        }}
+      />
+    </FormShell>
+  );
+}
+
+function CarouselForm(props: Props) {
+  const initial =
+    (props.data.slides as { url: string; alt?: string; caption?: string; linkHref?: string }[]) ?? [];
+  const [slides, setSlides] = useState(initial);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const d = props.data as Record<string, unknown>;
+
+  return (
+    <FormShell {...props}>
+      <Field name="eyebrow" label="Texto superior" defaultValue={d.eyebrow as string ?? ""} />
+      <Field name="heading" label="Encabezado" defaultValue={d.heading as string ?? ""} />
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+          Aspect ratio
+        </span>
+        <select
+          name="aspectRatio"
+          defaultValue={(d.aspectRatio as string) ?? "16/9"}
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+        >
+          <option value="16/9">16:9 (panorámico)</option>
+          <option value="4/3">4:3 (clásico)</option>
+          <option value="1/1">1:1 (cuadrado)</option>
+          <option value="21/9">21:9 (cinema)</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+          Intervalo (segundos)
+        </span>
+        <input
+          type="number"
+          name="intervalSeconds"
+          min={2}
+          max={20}
+          defaultValue={(d.intervalSeconds as number) ?? 5}
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+        />
+      </label>
+      <label className="flex items-center gap-2 text-[13px] text-white/75">
+        <input
+          type="checkbox"
+          name="autoplay"
+          defaultChecked={(d.autoplay as boolean) ?? true}
+        />
+        Autoplay
+      </label>
+      <label className="flex items-center gap-2 text-[13px] text-white/75">
+        <input
+          type="checkbox"
+          name="loop"
+          defaultChecked={(d.loop as boolean) ?? true}
+        />
+        Loop infinito
+      </label>
+      <label className="flex items-center gap-2 text-[13px] text-white/75 md:col-span-2">
+        <input
+          type="checkbox"
+          name="indicators"
+          defaultChecked={(d.indicators as boolean) ?? true}
+        />
+        Mostrar puntitos indicadores
+      </label>
+
+      <div className="md:col-span-2 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+            Slides ({slides.length})
+          </span>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="rounded-md border border-orange/40 bg-orange/10 px-2.5 py-1 text-[12px] font-medium text-orange hover:bg-orange/20"
+          >
+            + Elegir de biblioteca
+          </button>
+        </div>
+        {slides.map((s, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 md:grid-cols-[80px_1fr_1fr_1fr_auto]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={s.url}
+              alt={s.alt ?? ""}
+              className="hidden md:block aspect-video rounded-md object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <input
+              name={`slide_${i}_url`}
+              defaultValue={s.url}
+              placeholder="URL"
+              className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
+            />
+            <input
+              name={`slide_${i}_caption`}
+              defaultValue={s.caption ?? ""}
+              placeholder="Leyenda"
+              className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
+            />
+            <input
+              name={`slide_${i}_linkHref`}
+              defaultValue={s.linkHref ?? ""}
+              placeholder="Link al hacer click (opcional)"
+              className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
+            />
+            <button
+              type="button"
+              onClick={() => setSlides(slides.filter((_, j) => j !== i))}
+              className="rounded-md border border-red-500/30 px-2 text-[12px] text-red-300 hover:bg-red-500/10"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <input type="hidden" name="slide_count" value={slides.length} />
+      </div>
+
+      <AssetPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(asset) =>
+          setSlides([...slides, { url: asset.url, alt: asset.alt ?? "", caption: "", linkHref: "" }])
+        }
+        filter="image"
+        multi
+        onPickMulti={(picked) =>
+          setSlides([
+            ...slides,
+            ...picked.map((p) => ({
+              url: p.url,
+              alt: p.alt ?? "",
+              caption: "",
+              linkHref: "",
+            })),
+          ])
+        }
+      />
     </FormShell>
   );
 }
@@ -393,9 +561,40 @@ function FeatureListForm(props: Props) {
 
 function ImageForm(props: Props) {
   const d = props.data as Record<string, unknown>;
+  const [url, setUrl] = useState((d.url as string) ?? "");
+  const [pickerOpen, setPickerOpen] = useState(false);
   return (
     <FormShell {...props}>
-      <Field name="url" label="URL de la imagen" defaultValue={d.url as string ?? ""} full />
+      <div className="md:col-span-2 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+            Imagen
+          </span>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="rounded-md border border-orange/40 bg-orange/10 px-2.5 py-1 text-[12px] font-medium text-orange hover:bg-orange/20"
+          >
+            {url ? "Cambiar imagen" : "+ Elegir imagen"}
+          </button>
+        </div>
+        {url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt=""
+            className="max-h-48 rounded-lg border border-white/10 object-contain bg-black/40"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        <input
+          name="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="URL"
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+        />
+      </div>
       <Field name="alt" label="Texto alternativo" defaultValue={d.alt as string ?? ""} />
       <Field name="caption" label="Leyenda" defaultValue={d.caption as string ?? ""} />
       <label className="md:col-span-2 flex items-center gap-2 text-[13px] text-white/75">
@@ -406,6 +605,13 @@ function ImageForm(props: Props) {
         />
         Mostrar a ancho completo
       </label>
+
+      <AssetPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(asset) => setUrl(asset.url)}
+        filter="image"
+      />
     </FormShell>
   );
 }

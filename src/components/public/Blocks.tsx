@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Block } from "@prisma/client";
 import { Hero } from "@/components/public/Hero";
+import { Carousel } from "@/components/public/Carousel";
 import { ArrowUpRight } from "@/components/Icons";
 import { youtubeOrVimeoEmbedUrl, type BlockType } from "@/lib/blocks";
 
@@ -43,6 +44,17 @@ type ImageBlock = {
   fullWidth?: boolean;
 };
 
+type Carousel = {
+  eyebrow?: string;
+  heading?: string;
+  slides: { url: string; alt?: string; caption?: string; linkHref?: string }[];
+  autoplay?: boolean;
+  intervalSeconds?: number;
+  loop?: boolean;
+  indicators?: boolean;
+  aspectRatio?: "16/9" | "4/3" | "1/1" | "21/9";
+};
+
 export function BlockRenderer({ block }: { block: Block }) {
   if (!block.visible) return null;
   const type = block.type as BlockType;
@@ -65,6 +77,8 @@ export function BlockRenderer({ block }: { block: Block }) {
       return <FeatureListSection data={data as unknown as FeatureList} />;
     case "image":
       return <ImageSection data={data as unknown as ImageBlock} />;
+    case "carousel":
+      return <CarouselSection data={data as unknown as Carousel} />;
     default:
       return null;
   }
@@ -359,6 +373,39 @@ function ImageSection({ data }: { data: ImageBlock }) {
           </figcaption>
         )}
       </figure>
+    </SectionWrap>
+  );
+}
+
+function CarouselSection({ data }: { data: Carousel }) {
+  if (!data.slides || data.slides.length === 0) return null;
+  return (
+    <SectionWrap>
+      {(data.eyebrow || data.heading) && (
+        <div className="mb-8 text-center">
+          <Eyebrow text={data.eyebrow} />
+          {data.heading && (
+            <h2
+              className="font-heading text-white"
+              style={{
+                fontSize: "clamp(32px,4.5vw,56px)",
+                lineHeight: 1.05,
+                letterSpacing: "-1px",
+              }}
+            >
+              {data.heading}
+            </h2>
+          )}
+        </div>
+      )}
+      <Carousel
+        slides={data.slides}
+        autoplay={data.autoplay}
+        intervalSeconds={data.intervalSeconds}
+        loop={data.loop}
+        indicators={data.indicators}
+        aspectRatio={data.aspectRatio}
+      />
     </SectionWrap>
   );
 }
