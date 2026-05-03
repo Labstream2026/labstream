@@ -7,7 +7,18 @@ Plataforma de la productora audiovisual: web pública con CMS + webapp interna p
 - **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS 4**
 - **PostgreSQL** + **Prisma** (ORM y migraciones)
 - **NextAuth v5** (credentials, bcrypt, JWT)
+- **Vercel Blob** (storage de assets — opcional, fallback a local)
+- **Google Drive API** (visor avanzado de carpetas — opcional, fallback a iframe)
 - **Resend** (emails transaccionales — opcional en dev)
+
+## Para activar features avanzados
+
+Lee **[docs/SETUP-CREDENTIALS.md](docs/SETUP-CREDENTIALS.md)** — guía paso a paso (5-15 min) para:
+- Vercel Blob (storage persistente del CMS)
+- Google Drive API Key (visor avanzado de carpetas con multi-select + descarga)
+- Service Account (carpetas privadas)
+
+La app funciona sin estas credenciales (modo iframe embed para Drive, /public/uploads para CMS).
 
 ## Estructura de la app
 
