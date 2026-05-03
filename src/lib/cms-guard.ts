@@ -1,12 +1,27 @@
 import { redirect } from "next/navigation";
-import { CmsRole } from "@prisma/client";
+import { CmsRole, UserKind } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+
+/**
+ * Tipos de usuario que pueden entrar al CMS.
+ * Productor / Cliente / Equipo NO entran al CMS — son redirigidos a /app.
+ */
+export function canAccessCms(kind: UserKind | null | undefined): boolean {
+  return (
+    kind === UserKind.ADMIN ||
+    kind === UserKind.CMS_EDITOR ||
+    kind === UserKind.CMS_REVIEWER
+  );
+}
 
 export async function requireCmsUser() {
   const session = await auth();
   if (!session?.user) {
-    redirect("/cms/login");
+    redirect("/cms/login?next=/cms");
+  }
+  if (!canAccessCms(session.user.kind)) {
+    redirect("/app?denied_cms=1");
   }
   return session.user;
 }
@@ -33,46 +48,29 @@ export function canReview(role: CmsRole): boolean {
 
 /**
  * Returns true if the user can edit the given page.
- * - SUPER_ADMIN: always true
- * - EDITOR: only if assigned to the page (PageAssignment.canEdit)
- * - REVIEWER: read-only for now
+ * Cualquiera con acceso al CMS (Admin, Editor, Reviewer) puede editar páginas.
+ * Reviewer puede editar también — lo dejamos abierto. Si quieres restricción
+ * de "solo lectura para Reviewer" se puede agregar después.
  */
 export async function canEditPage(
-  userId: string,
-  role: CmsRole,
-  pageId: string,
+  _userId: string,
+  _role: CmsRole,
+  _pageId: string,
 ): Promise<boolean> {
-  if (role === CmsRole.SUPER_ADMIN) return true;
-  if (role !== CmsRole.EDITOR) return false;
-  const a = await prisma.pageAssignment.findUnique({
-    where: { pageId_userId: { pageId, userId } },
-  });
-  return Boolean(a?.canEdit);
+  return true;
 }
 
-/** Throws via redirect if user cannot edit the given page. */
-export async function requirePageEditor(pageId: string) {
-  const me = await requireCmsUser();
-  const ok = await canEditPage(me.id, me.role, pageId);
-  if (!ok) redirect("/cms/pages?error=denied");
-  return me;
+/** Throws via redirect if user no tiene acceso al CMS. */
+export async function requirePageEditor(_pageId: string) {
+  return requireCmsUser();
 }
 
 /**
- * List page IDs the user is allowed to see in the CMS.
- * - SUPER_ADMIN, REVIEWER: all
- * - EDITOR: only assigned pages
+ * List page IDs visibles en el CMS — todos para cualquier usuario con acceso al CMS.
  */
 export async function listAccessiblePageIds(
-  userId: string,
-  role: CmsRole,
+  _userId: string,
+  _role: CmsRole,
 ): Promise<{ all: true } | { all: false; ids: string[] }> {
-  if (role === CmsRole.SUPER_ADMIN || role === CmsRole.REVIEWER) {
-    return { all: true };
-  }
-  const assignments = await prisma.pageAssignment.findMany({
-    where: { userId },
-    select: { pageId: true },
-  });
-  return { all: false, ids: assignments.map((a) => a.pageId) };
+  return { all: true };
 }

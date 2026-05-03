@@ -12,7 +12,8 @@ import { PageStatus } from "@prisma/client";
 async function createPage(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!isSuperAdmin(me.role)) redirect("/cms/pages?error=denied");
+  // requireCmsUser ya bloquea a quien no tiene acceso al CMS.
+  // Editor/Reviewer del CMS también pueden crear páginas.
 
   const title = String(formData.get("title") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")

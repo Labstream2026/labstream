@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import type { CmsRole } from "@prisma/client";
+import type { CmsRole, UserKind } from "@prisma/client";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -43,6 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name ?? user.email,
           role: user.role,
+          kind: user.kind,
         };
       },
     }),
@@ -52,6 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = (user as { role: CmsRole }).role;
+        token.kind = (user as { kind: UserKind }).kind;
       }
       return token;
     },
@@ -59,6 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as CmsRole;
+        session.user.kind = token.kind as UserKind;
       }
       return session;
     },

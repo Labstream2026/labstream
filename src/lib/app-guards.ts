@@ -1,24 +1,32 @@
 import { redirect } from "next/navigation";
-import { CmsRole, OrgType, ProjectRole, OrgRole } from "@prisma/client";
+import { CmsRole, OrgType, ProjectRole, OrgRole, UserKind } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export type AppRole =
-  | "MASTER" // Super Admin
-  | "PRODUCER" // Productor o productora ejecutiva en algún proyecto
-  | "TEAM" // Director, editor, DOP, etc.
-  | "CLIENT"; // Cliente (lead o viewer)
+  | "MASTER" // Administrador (kind=ADMIN)
+  | "PRODUCER" // Productor (kind=PRODUCER)
+  | "TEAM" // Equipo audiovisual (kind=TEAM)
+  | "CLIENT"; // Cliente (kind=CLIENT)
 
 /**
  * Devuelve el rol "principal" del usuario para decidir UI.
- * - MASTER si es SUPER_ADMIN
- * - sino se infiere del primer ProjectMember encontrado
- * - sino del OrgMember en una org tipo CLIENT
+ * Prioridad: User.kind > inferencia desde memberships
  */
 export async function getPrimaryAppRole(userId: string, cmsRole: CmsRole): Promise<AppRole> {
+  // Si tiene kind explícito, lo usamos
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { kind: true },
+  });
+  if (u?.kind === UserKind.ADMIN) return "MASTER";
+  if (u?.kind === UserKind.PRODUCER) return "PRODUCER";
+  if (u?.kind === UserKind.CLIENT) return "CLIENT";
+  if (u?.kind === UserKind.TEAM) return "TEAM";
+
+  // Fallback legacy
   if (cmsRole === CmsRole.SUPER_ADMIN) return "MASTER";
 
-  // ¿Es productor en algún proyecto?
   const producer = await prisma.projectMember.findFirst({
     where: {
       userId,
@@ -27,20 +35,14 @@ export async function getPrimaryAppRole(userId: string, cmsRole: CmsRole): Promi
   });
   if (producer) return "PRODUCER";
 
-  // ¿Pertenece a una org cliente?
   const clientOrg = await prisma.orgMember.findFirst({
-    where: {
-      userId,
-      org: { type: OrgType.CLIENT },
-    },
+    where: { userId, org: { type: OrgType.CLIENT } },
   });
   if (clientOrg) return "CLIENT";
 
-  // ¿Está en algún proyecto como equipo?
   const team = await prisma.projectMember.findFirst({ where: { userId } });
   if (team) return "TEAM";
 
-  // Sin proyectos: por defecto MASTER si es admin del CMS, sino CLIENT como fallback amigable
   return "CLIENT";
 }
 
@@ -52,9 +54,61 @@ export async function requireAppUser() {
 
 export async function requireMaster() {
   const me = await requireAppUser();
-  if (me.role !== CmsRole.SUPER_ADMIN) redirect("/app?denied=1");
+  if (me.kind !== UserKind.ADMIN) redirect("/app?denied=1");
   return me;
 }
+
+/** Productor o Master — pueden agregar usuarios y gestionar equipo */
+export async function requireProducerOrMaster() {
+  const me = await requireAppUser();
+  if (me.kind !== UserKind.ADMIN && me.kind !== UserKind.PRODUCER) {
+    redirect("/app?denied=1");
+  }
+  return me;
+}
+
+export function isMaster(kind: UserKind): boolean {
+  return kind === UserKind.ADMIN;
+}
+
+export function canManageUsers(kind: UserKind): boolean {
+  return kind === UserKind.ADMIN || kind === UserKind.PRODUCER;
+}
+
+/** Tipos de usuario que el rol actual puede crear */
+export function creatableKinds(creatorKind: UserKind): UserKind[] {
+  if (creatorKind === UserKind.ADMIN) {
+    return [
+      UserKind.CMS_EDITOR,
+      UserKind.CMS_REVIEWER,
+      UserKind.PRODUCER,
+      UserKind.TEAM,
+      UserKind.CLIENT,
+    ];
+  }
+  if (creatorKind === UserKind.PRODUCER) {
+    return [UserKind.TEAM, UserKind.CLIENT];
+  }
+  return [];
+}
+
+export const USER_KIND_LABELS: Record<UserKind, string> = {
+  ADMIN: "Administrador",
+  CMS_EDITOR: "Editor del CMS",
+  CMS_REVIEWER: "Revisor del CMS",
+  PRODUCER: "Productor",
+  TEAM: "Equipo audiovisual",
+  CLIENT: "Cliente",
+};
+
+export const USER_KIND_DESCRIPTIONS: Record<UserKind, string> = {
+  ADMIN: "Acceso total al CMS y a la webapp",
+  CMS_EDITOR: "Solo entra al CMS · puede crear y editar páginas",
+  CMS_REVIEWER: "Solo entra al CMS · revisa y aprueba contenido",
+  PRODUCER: "Solo webapp · gestiona proyectos y agrega equipo/clientes",
+  TEAM: "Solo webapp · ve proyectos donde está asignado",
+  CLIENT: "Solo webapp · ve y aprueba sus proyectos",
+};
 
 /** ¿El usuario tiene visibilidad sobre este proyecto? */
 export async function canViewProject(

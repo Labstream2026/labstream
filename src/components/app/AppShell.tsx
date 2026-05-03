@@ -24,15 +24,16 @@ const NAV_BY_ROLE: Record<
   MASTER: [
     { href: "/app", label: "Inicio" },
     { href: "/app/projects", label: "Proyectos" },
+    { href: "/app/users", label: "Personas", section: "admin" },
     { href: "/app/orgs", label: "Organizaciones", section: "admin" },
     { href: "/app/templates", label: "Plantillas", section: "admin" },
-    { href: "/app/team", label: "Equipo", section: "admin" },
-    { href: "/cms", label: "Volver al CMS", section: "admin" },
+    { href: "/cms", label: "Ir al CMS", section: "admin" },
   ],
   PRODUCER: [
     { href: "/app", label: "Inicio" },
     { href: "/app/projects", label: "Mis proyectos" },
     { href: "/app/tasks", label: "Mis tareas" },
+    { href: "/app/users", label: "Mi equipo" },
   ],
   TEAM: [
     { href: "/app", label: "Inicio" },

@@ -79,9 +79,9 @@ export function CmsShell({ user, isSuper, signOut, children }: Props) {
               Administración
             </div>
             <NavLink
-              href="/cms/users"
-              label="Usuarios del equipo"
-              active={pathname.startsWith("/cms/users")}
+              href="/app/users"
+              label="Usuarios (en webapp) ↗"
+              active={false}
             />
             <NavLink
               href="/cms/settings"

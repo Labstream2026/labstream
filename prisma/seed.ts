@@ -1,6 +1,7 @@
 import {
   PrismaClient,
   CmsRole,
+  UserKind,
   PageStatus,
   OrgType,
   OrgRole,
@@ -32,12 +33,13 @@ async function seedCms() {
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: { kind: UserKind.ADMIN },
     create: {
       email: adminEmail,
-      name: "Super Admin",
+      name: "Administrador",
       passwordHash,
       role: CmsRole.SUPER_ADMIN,
+      kind: UserKind.ADMIN,
       active: true,
     },
   });
@@ -215,16 +217,18 @@ async function makeUser(opts: {
   email: string;
   name: string;
   cmsRole?: CmsRole;
+  kind?: UserKind;
 }) {
   const passwordHash = await bcrypt.hash("Demo2026!", 12);
   return prisma.user.upsert({
     where: { email: opts.email },
-    update: {},
+    update: { kind: opts.kind ?? UserKind.TEAM },
     create: {
       email: opts.email,
       name: opts.name,
       passwordHash,
       role: opts.cmsRole ?? CmsRole.EDITOR,
+      kind: opts.kind ?? UserKind.TEAM,
       active: true,
     },
   });
@@ -257,21 +261,21 @@ async function seedWebapp() {
   if (!master) throw new Error("Super admin debe existir antes");
 
   // ─── Equipo interno ────
-  const lucia = await makeUser({ email: "lucia@labstream.local", name: "Lucía Pérez" });
-  const carlos = await makeUser({ email: "carlos@labstream.local", name: "Carlos Ruiz" });
-  const ana = await makeUser({ email: "ana@labstream.local", name: "Ana Torres" });
-  const javier = await makeUser({ email: "javier@labstream.local", name: "Javier Mora" });
+  const lucia = await makeUser({ email: "lucia@labstream.local", name: "Lucía Pérez", kind: UserKind.PRODUCER });
+  const carlos = await makeUser({ email: "carlos@labstream.local", name: "Carlos Ruiz", kind: UserKind.TEAM });
+  const ana = await makeUser({ email: "ana@labstream.local", name: "Ana Torres", kind: UserKind.TEAM });
+  const javier = await makeUser({ email: "javier@labstream.local", name: "Javier Mora", kind: UserKind.TEAM });
 
   // ─── Productoras externas ────
-  const sofia = await makeUser({ email: "sofia@productoranorte.com", name: "Sofía Ramírez" });
-  const diego = await makeUser({ email: "diego@productoranorte.com", name: "Diego Castaño" });
+  const sofia = await makeUser({ email: "sofia@productoranorte.com", name: "Sofía Ramírez", kind: UserKind.PRODUCER });
+  const diego = await makeUser({ email: "diego@productoranorte.com", name: "Diego Castaño", kind: UserKind.TEAM });
 
   // ─── Cliente PepsiCo ────
-  const brand1 = await makeUser({ email: "marta@pepsico.com", name: "Marta Salinas" });
-  const brand2 = await makeUser({ email: "ricardo@pepsico.com", name: "Ricardo Ortiz" });
+  const brand1 = await makeUser({ email: "marta@pepsico.com", name: "Marta Salinas", kind: UserKind.CLIENT });
+  const brand2 = await makeUser({ email: "ricardo@pepsico.com", name: "Ricardo Ortiz", kind: UserKind.CLIENT });
 
   // ─── Cliente otra empresa (para demo de variedad) ────
-  const brand3 = await makeUser({ email: "elena@bavaria.co", name: "Elena Marín" });
+  const brand3 = await makeUser({ email: "elena@bavaria.co", name: "Elena Marín", kind: UserKind.CLIENT });
 
   // ─── Organizations ────
   const labstream = await prisma.organization.create({

@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "UserKind" AS ENUM ('ADMIN', 'CMS_EDITOR', 'CMS_REVIEWER', 'PRODUCER', 'TEAM', 'CLIENT');
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "kind" "UserKind" NOT NULL DEFAULT 'TEAM';

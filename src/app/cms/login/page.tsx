@@ -1,23 +1,43 @@
 import { redirect } from "next/navigation";
+import { UserKind } from "@prisma/client";
 import { auth, signIn } from "@/auth";
 import { AuthError } from "next-auth";
 import { Logo } from "@/components/Logo";
+import { canAccessCms } from "@/lib/cms-guard";
 
 function safeNext(raw: string | undefined): string {
-  if (!raw) return "/app";
+  if (!raw) return "";
   // Solo permitimos rutas internas (empiezan con /), evitar open-redirect
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/app";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "";
   return raw;
+}
+
+/**
+ * Default landing por tipo de usuario.
+ * Editor/Reviewer del CMS aterrizan en /cms; los demás en /app.
+ * Admin va a /app por default (su lugar de trabajo principal).
+ */
+function defaultLandingForKind(kind: UserKind | undefined): string {
+  if (kind === UserKind.CMS_EDITOR || kind === UserKind.CMS_REVIEWER) return "/cms";
+  return "/app";
 }
 
 export default async function LoginPage(props: {
   searchParams: Promise<{ error?: string; next?: string; callbackUrl?: string }>;
 }) {
   const sp = await props.searchParams;
-  const next = safeNext(sp.next ?? sp.callbackUrl);
+  const explicitNext = safeNext(sp.next ?? sp.callbackUrl);
 
   const session = await auth();
-  if (session?.user) redirect(next);
+  if (session?.user) {
+    let target = explicitNext || defaultLandingForKind(session.user.kind);
+    // Si pidieron /cms pero no tiene acceso, mandar a /app
+    if (target.startsWith("/cms") && !canAccessCms(session.user.kind)) {
+      target = "/app";
+    }
+    redirect(target);
+  }
+  const next = explicitNext;
 
   const errorMsg =
     sp.error === "CredentialsSignin"
@@ -28,17 +48,22 @@ export default async function LoginPage(props: {
 
   async function handleLogin(formData: FormData) {
     "use server";
-    const target = safeNext(String(formData.get("next") ?? ""));
+    const explicitTarget = safeNext(String(formData.get("next") ?? ""));
     try {
+      // Si no se pidió un next explícito, NextAuth redirige al callback default ("/")
+      // Lo capturamos y reasignamos según el kind del usuario en el server component
+      // que renderiza /. Como NextAuth necesita un redirectTo concreto, usamos /api/auth/post-login
+      // que decide según session.
+      const redirectTo = explicitTarget || "/api/auth/post-login";
       await signIn("credentials", {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
-        redirectTo: target,
+        redirectTo,
       });
     } catch (e) {
       if (e instanceof AuthError) {
         const qs = new URLSearchParams({ error: e.type });
-        if (target !== "/app") qs.set("next", target);
+        if (explicitTarget) qs.set("next", explicitTarget);
         redirect(`/cms/login?${qs.toString()}`);
       }
       throw e;

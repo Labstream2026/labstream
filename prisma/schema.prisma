@@ -15,6 +15,16 @@ enum CmsRole {
   REVIEWER
 }
 
+// Tipo principal del usuario — define a qué sistemas tiene acceso
+enum UserKind {
+  ADMIN          // Administrador único — acceso total a CMS y webapp
+  CMS_EDITOR     // Editor del CMS — solo acceso a /cms (crea y edita páginas)
+  CMS_REVIEWER   // Revisor del CMS — solo /cms (lectura, aprueba)
+  PRODUCER       // Productor — solo webapp, gestiona proyectos y equipo
+  TEAM           // Equipo audiovisual — solo webapp, ve proyectos asignados
+  CLIENT         // Cliente — solo webapp, ve y aprueba sus proyectos
+}
+
 enum PageStatus {
   DRAFT
   REVIEW
@@ -148,6 +158,7 @@ model User {
   name          String?
   passwordHash  String
   role          CmsRole   @default(EDITOR)
+  kind          UserKind  @default(TEAM)
   active        Boolean   @default(true)
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
