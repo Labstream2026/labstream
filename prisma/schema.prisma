@@ -316,8 +316,18 @@ model SiteSettings {
   siteName     String   @default("Labstream Studio")
   tagline      String?
   logoUrl      String?
+  faviconUrl   String?
   contactEmail String?
   socials      Json?
+
+  // Theming
+  fontHeading  String   @default("Instrument Serif")
+  fontBody     String   @default("Figtree")
+  colorPrimary String   @default("#E8640C")
+  colorAccent  String   @default("#7B61FF")
+  colorBg      String   @default("#080808")
+  colorText    String   @default("#F0F0EE")
+
   updatedAt    DateTime @updatedAt
 }
 

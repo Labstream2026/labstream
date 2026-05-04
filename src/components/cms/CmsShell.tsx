@@ -73,6 +73,11 @@ export function CmsShell({ user, isSuper, signOut, children }: Props) {
           label="Medios"
           active={pathname.startsWith("/cms/assets")}
         />
+        <NavLink
+          href="/cms/appearance"
+          label="Apariencia"
+          active={pathname.startsWith("/cms/appearance")}
+        />
         {isSuper && (
           <>
             <div className="mt-4 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/30">

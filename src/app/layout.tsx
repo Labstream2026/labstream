@@ -1,20 +1,46 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { getSiteSettings, buildGoogleFontsUrl } from "@/lib/site-settings";
 
-export const metadata: Metadata = {
-  title: {
-    default: "Labstream Studio — Casa productora audiovisual",
-    template: "%s — Labstream Studio",
-  },
-  description:
-    "Producción audiovisual de vanguardia, fusionada con inteligencia artificial. Imágenes que definen marcas — extraordinarias y precisas.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSiteSettings();
+  return {
+    title: {
+      default: `${site.siteName}${site.tagline ? ` — ${site.tagline}` : ""}`,
+      template: `%s — ${site.siteName}`,
+    },
+    description:
+      site.tagline ??
+      "Producción audiovisual de vanguardia, fusionada con inteligencia artificial.",
+    icons: site.faviconUrl ? { icon: site.faviconUrl } : undefined,
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const site = await getSiteSettings();
+  const fontsUrl = buildGoogleFontsUrl(site.fontHeading, site.fontBody);
+
+  // Inyectamos las CSS variables como style en el <html> para que
+  // todos los componentes con var(--xxx) las hereden.
+  const themeStyle = `
+    :root {
+      --color-primary: ${site.colorPrimary};
+      --color-accent: ${site.colorAccent};
+      --color-bg: ${site.colorBg};
+      --color-text: ${site.colorText};
+      --orange: ${site.colorPrimary};
+      --accent: ${site.colorAccent};
+      --bg: ${site.colorBg};
+      --text: ${site.colorText};
+      --font-heading: '${site.fontHeading}', serif;
+      --font-body: '${site.fontBody}', sans-serif;
+    }
+  `;
+
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
@@ -24,10 +50,8 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap"
-          rel="stylesheet"
-        />
+        <link href={fontsUrl} rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{ __html: themeStyle }} />
       </head>
       <body>{children}</body>
     </html>
