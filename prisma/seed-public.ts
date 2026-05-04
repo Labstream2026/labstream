@@ -65,6 +65,18 @@ const IMG = {
 async function main() {
   console.log("Seeding public content (Fase 1)…");
 
+  const portfolioCount = await prisma.portfolioProject.count();
+  const blogCount = await prisma.blogPost.count();
+  const teamCount = await prisma.teamMember.count();
+
+  if (portfolioCount > 0 || blogCount > 0 || teamCount > 0) {
+    console.log(
+      `✔ Skipping seed (existing data: portfolio=${portfolioCount}, blog=${blogCount}, team=${teamCount}). ` +
+        `Edit content via the CMS instead.`,
+    );
+    return;
+  }
+
   await seedPortfolio();
   await seedBlog();
   await seedTestimonials();
