@@ -69,6 +69,7 @@ export default async function HomePage() {
         subtitle="Producción audiovisual de vanguardia, fusionada con inteligencia artificial. Imágenes que definen marcas — extraordinarias y precisas."
         ctaPrimary={{ label: "Empieza tu proyecto", href: "/contacto" }}
         ctaSecondary={{ label: "Ver showreel", href: "/portafolio" }}
+        backgroundVideo="https://assets.mixkit.co/videos/4842/4842-720.mp4"
         backgroundImage="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80"
       />
 

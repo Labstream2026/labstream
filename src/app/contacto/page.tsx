@@ -33,15 +33,22 @@ export default async function ContactoPage() {
       <Navbar />
       <WhatsAppFloat />
 
-      <section className="px-6 pb-12 pt-32 md:pt-40" style={{ background: "var(--bg)" }}>
+      <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
         <div
-          className="absolute inset-x-0 top-0 h-[60vh] -z-10"
+          className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse at top, rgba(232,100,12,0.16), transparent 60%)",
+              "linear-gradient(180deg, rgba(8,8,8,0.45) 0%, rgba(8,8,8,0.78) 55%, rgba(8,8,8,1) 100%), radial-gradient(ellipse at top, rgba(232,100,12,0.12), transparent 70%)",
           }}
         />
-        <div className="mx-auto max-w-5xl">
+        <div className="relative mx-auto max-w-5xl px-6">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
               // Hablemos

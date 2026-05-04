@@ -48,8 +48,22 @@ export default async function PortafolioPage(props: {
       <Navbar />
       <WhatsAppFloat />
 
-      <section className="px-6 pb-12 pt-32 md:pt-40" style={{ background: "var(--bg)" }}>
-        <div className="mx-auto max-w-6xl">
+      <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2400&q=80"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.85) 60%, rgba(8,8,8,1) 100%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
               // Portafolio

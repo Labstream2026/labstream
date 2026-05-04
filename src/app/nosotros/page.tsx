@@ -31,15 +31,19 @@ export default async function NosotrosPage() {
       <WhatsAppFloat />
 
       {/* Hero editorial */}
-      <section
-        className="relative px-6 pb-20 pt-32 md:pt-40"
-        style={{ background: "var(--bg)" }}
-      >
+      <section className="relative overflow-hidden px-6 pb-20 pt-32 md:pt-40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2400&q=80"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
         <div
-          className="absolute inset-x-0 top-0 h-[70vh]"
+          className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse at top, rgba(232,100,12,0.16), transparent 60%)",
+              "linear-gradient(180deg, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.85) 60%, rgba(8,8,8,1) 100%), radial-gradient(ellipse at top, rgba(232,100,12,0.18), transparent 70%)",
           }}
         />
         <div className="relative mx-auto max-w-5xl">

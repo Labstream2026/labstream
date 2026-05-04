@@ -44,8 +44,22 @@ export default async function BlogPage(props: {
       <Navbar />
       <WhatsAppFloat />
 
-      <section className="px-6 pb-12 pt-32 md:pt-40" style={{ background: "var(--bg)" }}>
-        <div className="mx-auto max-w-6xl">
+      <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=2400&q=80"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(8,8,8,0.65) 0%, rgba(8,8,8,0.88) 60%, rgba(8,8,8,1) 100%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
               // Blog

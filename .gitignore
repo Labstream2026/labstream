@@ -47,3 +47,6 @@ next-env.d.ts
 
 # Claude Code
 /.claude/settings.local.json
+
+# Local Claude config (preview launch.json, etc.)
+.claude/

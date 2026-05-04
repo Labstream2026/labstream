@@ -32,10 +32,12 @@ export function HomeHero({
       {backgroundVideo ? (
         <video
           src={backgroundVideo}
+          poster={backgroundImage}
           autoPlay
           muted
           loop
           playsInline
+          preload="auto"
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : backgroundImage ? (
@@ -60,7 +62,7 @@ export function HomeHero({
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.85) 100%)",
+            "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.55) 35%, rgba(8,8,8,0.95) 100%), radial-gradient(ellipse at 50% 30%, rgba(232,100,12,0.10), transparent 60%)",
         }}
       />
 
