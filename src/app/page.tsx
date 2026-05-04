@@ -15,6 +15,9 @@ type HeroData = {
   ctaHref?: string;
   secondaryLabel?: string;
   secondaryHref?: string;
+  backgroundImage?: string;
+  backgroundVideo?: string;
+  overlayOpacity?: number;
 };
 
 type StatsData = { items: { value: string; label: string }[] };
@@ -53,6 +56,9 @@ export default async function HomePage() {
         badgeText={
           heroData.eyebrow ?? "Showreel 2026 · Producción potenciada por IA"
         }
+        backgroundImage={heroData.backgroundImage}
+        backgroundVideo={heroData.backgroundVideo}
+        overlayOpacity={heroData.overlayOpacity}
         ctaPrimary={{
           label: heroData.ctaLabel || "Empieza tu proyecto",
           href: heroData.ctaHref || "/#contact",

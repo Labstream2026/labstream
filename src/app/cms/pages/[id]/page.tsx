@@ -87,6 +87,12 @@ async function saveBlock(formData: FormData) {
         nextData[k] = String(v);
       }
       if (type === "image") nextData.fullWidth = formData.get("fullWidth") === "on";
+      if (type === "hero") {
+        const overlay = parseInt(String(formData.get("overlayOpacity") ?? "60"), 10);
+        nextData.overlayOpacity = Number.isFinite(overlay)
+          ? Math.min(Math.max(overlay, 0), 100)
+          : 60;
+      }
       break;
     }
     case "stats": {
@@ -309,6 +315,40 @@ export default async function EditPage(props: {
             Ver pública ↗
           </Link>
         </div>
+      </div>
+
+      <div
+        className="mb-6 rounded-2xl border p-4"
+        style={{
+          borderColor: "rgba(232,100,12,0.35)",
+          background: "linear-gradient(180deg, rgba(232,100,12,0.06), transparent 80%)",
+        }}
+      >
+        <div className="text-[12px] font-semibold uppercase tracking-wider text-orange">
+          💡 Cómo subir y cambiar imágenes / videos
+        </div>
+        <ul className="mt-2 space-y-1 text-[13px] text-white/75">
+          <li>
+            • <strong>Hero</strong>: ahora tiene campos &quot;Imagen de fondo&quot; y
+            &quot;Video de fondo&quot;. Click en el botón naranja{" "}
+            <span className="rounded border border-orange/40 bg-orange/10 px-1.5 py-0.5 text-[11px] text-orange">
+              + Elegir imagen
+            </span>{" "}
+            para abrir la biblioteca o subir nueva.
+          </li>
+          <li>
+            • <strong>Galería / Carrusel / Imagen</strong>: agrega un bloque de ese tipo
+            abajo y usa el mismo botón. Soporta múltiple selección.
+          </li>
+          <li>
+            • <strong>Video</strong>: pega URL de YouTube, Vimeo, Drive o .mp4 — la app
+            detecta el tipo automáticamente.
+          </li>
+          <li>
+            • <strong>Reemplazar</strong>: edita el bloque, click en el thumbnail
+            existente o &quot;Cambiar imagen&quot; → elige otra → guarda.
+          </li>
+        </ul>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

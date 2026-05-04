@@ -147,16 +147,92 @@ function Field({
 }
 
 function HeroForm(props: Props) {
-  const d = props.data as Record<string, string>;
+  const d = props.data as Record<string, unknown>;
+  const [bgImage, setBgImage] = useState((d.backgroundImage as string) ?? "");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const overlayInit = (d.overlayOpacity as number) ?? 60;
+
   return (
     <FormShell {...props}>
-      <Field name="eyebrow" label="Texto superior (badge)" defaultValue={d.eyebrow} />
-      <Field name="title" label="Título principal" defaultValue={d.title} />
-      <Field name="subtitle" label="Subtítulo" defaultValue={d.subtitle} multiline full />
-      <Field name="ctaLabel" label="Botón primario — texto" defaultValue={d.ctaLabel} />
-      <Field name="ctaHref" label="Botón primario — link" defaultValue={d.ctaHref} />
-      <Field name="secondaryLabel" label="Botón secundario — texto" defaultValue={d.secondaryLabel} />
-      <Field name="secondaryHref" label="Botón secundario — link" defaultValue={d.secondaryHref} />
+      <Field name="eyebrow" label="Texto superior (badge)" defaultValue={d.eyebrow as string ?? ""} />
+      <Field name="title" label="Título principal" defaultValue={d.title as string ?? ""} />
+      <Field name="subtitle" label="Subtítulo" defaultValue={d.subtitle as string ?? ""} multiline full />
+      <Field name="ctaLabel" label="Botón primario — texto" defaultValue={d.ctaLabel as string ?? ""} />
+      <Field name="ctaHref" label="Botón primario — link" defaultValue={d.ctaHref as string ?? ""} />
+      <Field name="secondaryLabel" label="Botón secundario — texto" defaultValue={d.secondaryLabel as string ?? ""} />
+      <Field name="secondaryHref" label="Botón secundario — link" defaultValue={d.secondaryHref as string ?? ""} />
+
+      {/* Imagen de fondo */}
+      <div className="md:col-span-2 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/65">
+            🖼️ Imagen de fondo (opcional)
+          </span>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="rounded-md border border-orange/40 bg-orange/10 px-2.5 py-1 text-[12px] font-medium text-orange hover:bg-orange/20"
+          >
+            {bgImage ? "Cambiar imagen" : "+ Elegir imagen"}
+          </button>
+        </div>
+        {bgImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bgImage}
+            alt=""
+            className="max-h-40 rounded-lg border border-white/10 object-cover"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        <input
+          name="backgroundImage"
+          value={bgImage}
+          onChange={(e) => setBgImage(e.target.value)}
+          placeholder="URL de imagen (o usa el botón Elegir)"
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white"
+        />
+        <button
+          type="button"
+          onClick={() => setBgImage("")}
+          className="self-start text-[11px] text-white/40 hover:text-red-300"
+        >
+          Quitar imagen
+        </button>
+      </div>
+
+      {/* Video de fondo */}
+      <Field
+        name="backgroundVideo"
+        label="🎬 Video de fondo (opcional) — URL de YouTube, Vimeo, Drive o .mp4"
+        defaultValue={d.backgroundVideo as string ?? ""}
+        full
+      />
+
+      {/* Overlay opacity */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+          Oscurecer fondo (0-100%)
+        </span>
+        <input
+          type="number"
+          name="overlayOpacity"
+          min={0}
+          max={100}
+          defaultValue={overlayInit}
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+        />
+        <span className="text-[11px] text-white/40">
+          0 = sin oscurecer · 60 = balance recomendado · 100 = negro total
+        </span>
+      </label>
+
+      <AssetPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(asset) => setBgImage(asset.url)}
+        filter="image"
+      />
     </FormShell>
   );
 }

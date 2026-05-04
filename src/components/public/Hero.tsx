@@ -1,4 +1,14 @@
 import { ArrowUpRight, Clock, Globe, Play } from "@/components/Icons";
+import {
+  detectEmbedKind,
+  driveFilePreviewIframeUrl,
+  vimeoEmbedUrl,
+  youtubeEmbedUrl,
+  extractDriveFileId,
+  extractVimeoId,
+  extractYouTubeId,
+} from "@/lib/google-drive";
+import { EmbedKind } from "@prisma/client";
 
 type HeroProps = {
   eyebrow?: string;
@@ -11,6 +21,9 @@ type HeroProps = {
   stats?: { num: string; label: string }[];
   partnersLabel?: string;
   partners?: string[];
+  backgroundImage?: string;
+  backgroundVideo?: string;
+  overlayOpacity?: number;
 };
 
 function BlurText({
@@ -51,27 +64,82 @@ export function Hero({
   stats = [],
   partnersLabel,
   partners = [],
+  backgroundImage,
+  backgroundVideo,
+  overlayOpacity = 60,
 }: HeroProps) {
+  // Detectar tipo de video si se pasó URL
+  const videoEmbed = backgroundVideo
+    ? buildBackgroundVideoEmbed(backgroundVideo)
+    : null;
+  const hasMedia = Boolean(backgroundImage) || Boolean(videoEmbed);
+  const overlayAlpha = Math.min(Math.max(overlayOpacity, 0), 100) / 100;
+
   return (
     <section
       id="home"
       className="relative w-full overflow-hidden"
       style={{ minHeight: "100vh", background: "#000" }}
     >
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at top, rgba(232,100,12,0.12), transparent 60%), radial-gradient(ellipse at bottom right, rgba(123,97,255,0.08), transparent 50%)",
-        }}
-      />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.65) 100%)",
-        }}
-      />
+      {/* Imagen de fondo */}
+      {backgroundImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={backgroundImage}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      )}
+
+      {/* Video de fondo */}
+      {videoEmbed?.kind === "iframe" && (
+        <iframe
+          src={videoEmbed.url}
+          className="absolute inset-0 h-full w-full"
+          style={{ border: 0, pointerEvents: "none" }}
+          allow="autoplay; encrypted-media"
+          title="Hero background video"
+        />
+      )}
+      {videoEmbed?.kind === "video" && (
+        <video
+          src={videoEmbed.url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+
+      {/* Gradient default si no hay media */}
+      {!hasMedia && (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at top, rgba(232,100,12,0.12), transparent 60%), radial-gradient(ellipse at bottom right, rgba(123,97,255,0.08), transparent 50%)",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.65) 100%)",
+            }}
+          />
+        </>
+      )}
+
+      {/* Overlay encima del media para contraste de texto */}
+      {hasMedia && (
+        <div
+          className="absolute inset-0"
+          style={{ background: `rgba(0,0,0,${overlayAlpha})` }}
+        />
+      )}
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <div
@@ -187,4 +255,42 @@ export function Hero({
       </div>
     </section>
   );
+}
+
+/**
+ * Construye URL de video para usar como fondo del hero.
+ * Soporta YouTube, Vimeo, Drive file, .mp4 directo.
+ * Para YouTube/Vimeo agrega params de autoplay/muted/loop sin controles.
+ */
+function buildBackgroundVideoEmbed(
+  url: string,
+): { kind: "iframe" | "video"; url: string } | null {
+  const detected = detectEmbedKind(url);
+
+  if (detected.kind === EmbedKind.YOUTUBE) {
+    const id = extractYouTubeId(url);
+    if (!id) return null;
+    return {
+      kind: "iframe",
+      url: `${youtubeEmbedUrl(id)}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&modestbranding=1`,
+    };
+  }
+  if (detected.kind === EmbedKind.VIMEO) {
+    const id = extractVimeoId(url);
+    if (!id) return null;
+    return {
+      kind: "iframe",
+      url: `${vimeoEmbedUrl(id)}?autoplay=1&muted=1&loop=1&background=1`,
+    };
+  }
+  if (detected.kind === EmbedKind.DRIVE_FILE) {
+    const id = extractDriveFileId(url);
+    if (!id) return null;
+    // Drive preview no tiene parámetros para autoplay/muted; queda con controles
+    return { kind: "iframe", url: driveFilePreviewIframeUrl(id) };
+  }
+  if (detected.kind === EmbedKind.DIRECT_VIDEO) {
+    return { kind: "video", url };
+  }
+  return null;
 }

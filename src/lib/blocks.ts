@@ -23,6 +23,9 @@ export const blockSchemas = {
     ctaHref: z.string().optional().default(""),
     secondaryLabel: z.string().optional().default(""),
     secondaryHref: z.string().optional().default(""),
+    backgroundImage: z.string().optional().default(""),
+    backgroundVideo: z.string().optional().default(""),
+    overlayOpacity: z.number().min(0).max(100).optional().default(60),
   }),
 
   stats: z.object({
@@ -144,6 +147,9 @@ export const BLOCK_DEFAULTS: Record<BlockType, Record<string, unknown>> = {
     ctaHref: "",
     secondaryLabel: "",
     secondaryHref: "",
+    backgroundImage: "",
+    backgroundVideo: "",
+    overlayOpacity: 60,
   },
   stats: {
     items: [

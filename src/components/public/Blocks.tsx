@@ -93,6 +93,9 @@ function HeroFromBlock({ data }: { data: Record<string, unknown> }) {
     ctaHref?: string;
     secondaryLabel?: string;
     secondaryHref?: string;
+    backgroundImage?: string;
+    backgroundVideo?: string;
+    overlayOpacity?: number;
   };
   return (
     <Hero
@@ -109,6 +112,9 @@ function HeroFromBlock({ data }: { data: Record<string, unknown> }) {
           : { label: "Ver Showreel", href: "#" }
       }
       badgeText={d.eyebrow ?? "Showreel 2026 · Producción potenciada por IA"}
+      backgroundImage={d.backgroundImage}
+      backgroundVideo={d.backgroundVideo}
+      overlayOpacity={d.overlayOpacity}
     />
   );
 }
