@@ -287,6 +287,12 @@ model Service {
   title       String
   summary     String?
   content     String?
+  // Detalle de servicio para la página /servicio/[slug]
+  longDescription String?  // markdown / texto largo
+  heroImageUrl    String?
+  capabilities    Json?    // [{ icon, title, desc }, ...]
+  process         Json?    // [{ step, title, desc }, ...]
+  pricing         String?  // "Desde $X" o texto libre
   order       Int      @default(0)
   visible     Boolean  @default(true)
   coverId     String?
@@ -605,4 +611,152 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([projectId, createdAt])
+}
+
+// ─── Contenido público (portafolio, blog, testimonios, etc.) ─────
+
+enum PortfolioCategory {
+  COMERCIAL
+  DOCUMENTAL
+  FOTOGRAFIA
+  STREAMING
+  BRANDED_CONTENT
+  REDES_SOCIALES
+  POST_PRODUCCION
+  IA
+  OTRO
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model PortfolioProject {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  title         String
+  client        String?           // PepsiCo, Bavaria, etc.
+  category      PortfolioCategory @default(COMERCIAL)
+  year          Int
+  excerpt       String?           // 1-2 líneas para card
+  brief         String?           // qué pidió el cliente
+  process       String?           // cómo lo abordamos (multi-paragraph)
+  result        String?           // resultado / impacto
+  coverImageUrl String?           // imagen de la card y hero
+  videoUrl      String?           // video final (Vimeo, YouTube, Drive)
+  galleryImages Json?             // [{ url, alt, caption }, ...]
+  beforeAfter   Json?             // [{ before, after, label }, ...]
+  credits       Json?             // [{ role, name }, ...]
+  tags          String[]          @default([])
+  featured      Boolean           @default(false)
+  order         Int               @default(0)
+  publishedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([category])
+  @@index([year])
+  @@index([featured])
+}
+
+model BlogPost {
+  id            String         @id @default(cuid())
+  slug          String         @unique
+  title         String
+  excerpt       String?
+  content       String         // markdown / rich text
+  coverImageUrl String?
+  authorName    String?        // string libre por ahora
+  authorRole    String?
+  category      String?        // "Producción", "IA", "Industria", etc.
+  tags          String[]       @default([])
+  status        BlogPostStatus @default(DRAFT)
+  readMinutes   Int?
+  publishedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([category])
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  authorName  String
+  authorRole  String?  // "Brand Manager", "CMO", etc.
+  authorCompany String?
+  authorAvatarUrl String?
+  body        String
+  rating      Int?     // 1-5
+  visible     Boolean  @default(true)
+  featured    Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([visible, order])
+}
+
+model ClientLogo {
+  id          String   @id @default(cuid())
+  name        String   // "PepsiCo"
+  logoUrl     String   // SVG/PNG transparente
+  websiteUrl  String?
+  visible     Boolean  @default(true)
+  featured    Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([visible, order])
+}
+
+model FaqItem {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  category    String?  // "Servicios", "Pago", "Proceso", etc.
+  visible     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([visible, order])
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  name        String
+  role        String   // "Director", "Productora ejecutiva"
+  bio         String?
+  photoUrl    String?
+  instagram   String?
+  vimeo       String?
+  linkedin    String?
+  visible     Boolean  @default(true)
+  featured    Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([visible, order])
+}
+
+model NewsletterSignup {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  source    String?  // "footer", "popup", "blog"
+  createdAt DateTime @default(now())
+}
+
+model AboutContent {
+  // Singleton — contenido de la página /nosotros
+  id            String   @id @default("singleton")
+  heroEyebrow   String?
+  heroTitle     String?
+  heroSubtitle  String?
+  story         String?  // multi-paragraph
+  mission       String?
+  vision        String?
+  values        Json?    // [{ icon, title, desc }, ...]
+  updatedAt     DateTime @updatedAt
 }
