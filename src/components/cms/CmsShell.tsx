@@ -69,6 +69,26 @@ export function CmsShell({ user, isSuper, signOut, children }: Props) {
           active={pathname.startsWith("/cms/services")}
         />
         <NavLink
+          href="/cms/portfolio"
+          label="Portafolio"
+          active={pathname.startsWith("/cms/portfolio")}
+        />
+        <NavLink
+          href="/cms/blog"
+          label="Blog"
+          active={pathname.startsWith("/cms/blog")}
+        />
+        <NavLink
+          href="/cms/about"
+          label="Acerca de"
+          active={pathname.startsWith("/cms/about")}
+        />
+        <NavLink
+          href="/cms/team"
+          label="Equipo"
+          active={pathname.startsWith("/cms/team")}
+        />
+        <NavLink
           href="/cms/testimonials"
           label="Testimonios"
           active={pathname.startsWith("/cms/testimonials")}

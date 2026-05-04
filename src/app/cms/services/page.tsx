@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -121,6 +122,12 @@ export default async function ServicesPage() {
               >
                 Guardar
               </button>
+              <Link
+                href={`/cms/services/${s.id}`}
+                className="rounded-md border border-orange/30 bg-orange/10 px-3 py-2 text-[12px] font-medium text-orange hover:bg-orange/15"
+              >
+                Detalle →
+              </Link>
             </div>
             <input
               name="content"
