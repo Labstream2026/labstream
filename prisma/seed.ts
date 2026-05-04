@@ -15,6 +15,7 @@ import {
   ApprovalStage,
   ApprovalDecision,
   EmbedKind,
+  AssetSource,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -90,6 +91,10 @@ async function seedCms() {
           ctaHref: "/#contact",
           secondaryLabel: "Ver Showreel",
           secondaryHref: "#",
+          backgroundImage:
+            "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
+          backgroundVideo: "",
+          overlayOpacity: 65,
         },
         updatedById: admin.id,
       },
@@ -104,6 +109,139 @@ async function seedCms() {
           ],
         },
         updatedById: admin.id,
+      },
+      {
+        pageId: home.id,
+        type: "carousel",
+        order: 2,
+        data: {
+          eyebrow: "Trabajos seleccionados",
+          heading: "Algunos proyectos recientes",
+          slides: [
+            {
+              url: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
+              alt: "Producción audiovisual",
+              caption: "Comercial · Marca global · 2025",
+            },
+            {
+              url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
+              alt: "Sesión de fotografía",
+              caption: "Editorial de marca · 2025",
+            },
+            {
+              url: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=2000&q=80",
+              alt: "Streaming en vivo",
+              caption: "Evento corporativo · multicámara · 2024",
+            },
+            {
+              url: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
+              alt: "Locación cinematográfica",
+              caption: "Documental · 2024",
+            },
+          ],
+          autoplay: true,
+          intervalSeconds: 5,
+          loop: true,
+          indicators: true,
+          aspectRatio: "21/9",
+        },
+        updatedById: admin.id,
+      },
+      {
+        pageId: home.id,
+        type: "featureList",
+        order: 3,
+        data: {
+          eyebrow: "Capacidades",
+          heading: "Producción reinventada",
+          items: [
+            {
+              icon: "🎬",
+              title: "Cinema premium",
+              desc: "Equipos de gama alta, dirección con criterio.",
+            },
+            {
+              icon: "⚡",
+              title: "Tiempos rápidos",
+              desc: "De la idea al máster sin perder calidad.",
+            },
+            {
+              icon: "🤖",
+              title: "IA aplicada",
+              desc: "Voz, imagen, edición potenciadas por IA.",
+            },
+            {
+              icon: "🌐",
+              title: "Multiplataforma",
+              desc: "Cortes optimizados para cada canal.",
+            },
+          ],
+          columns: 4,
+        },
+        updatedById: admin.id,
+      },
+    ],
+  });
+
+  // ─── Pre-cargar assets en la biblioteca para que el usuario los reemplace fácil ────
+  await prisma.asset.deleteMany({
+    where: { source: AssetSource.URL, url: { contains: "unsplash.com" } },
+  });
+  await prisma.asset.createMany({
+    data: [
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=400&q=70",
+        filename: "Hero · Cámara cinema",
+        alt: "Cámara cinematográfica en set",
+        storage: "external",
+        uploadedById: admin.id,
+      },
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=400&q=70",
+        filename: "Producción · Marca global",
+        alt: "Producción audiovisual en set",
+        storage: "external",
+        uploadedById: admin.id,
+      },
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=400&q=70",
+        filename: "Editorial · Sesión fotográfica",
+        alt: "Sesión de fotografía editorial",
+        storage: "external",
+        uploadedById: admin.id,
+      },
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=2000&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=400&q=70",
+        filename: "Streaming · Multicámara",
+        alt: "Setup de streaming multicámara",
+        storage: "external",
+        uploadedById: admin.id,
+      },
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=400&q=70",
+        filename: "Documental · Locación",
+        alt: "Locación cinematográfica",
+        storage: "external",
+        uploadedById: admin.id,
+      },
+      {
+        source: AssetSource.URL,
+        url: "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=2000&q=80",
+        thumbnailUrl: "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=400&q=70",
+        filename: "Post-producción · Color",
+        alt: "Estación de color grading",
+        storage: "external",
+        uploadedById: admin.id,
       },
     ],
   });
