@@ -51,14 +51,56 @@ async function deletePost(formData: FormData) {
 }
 
 export default async function BlogListPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
+  searchParams: Promise<{ ok?: string; error?: string; q?: string; cat?: string; status?: string }>;
 }) {
   await requireCmsUser();
   const sp = await props.searchParams;
+  const q = sp.q?.trim() ?? "";
+  const cat = sp.cat?.trim();
+  const statusFilter = sp.status === "published"
+    ? BlogPostStatus.PUBLISHED
+    : sp.status === "draft"
+      ? BlogPostStatus.DRAFT
+      : null;
 
   const posts = await prisma.blogPost.findMany({
+    where: {
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(cat ? { category: cat } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { excerpt: { contains: q, mode: "insensitive" as const } },
+              { slug: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });
+
+  const allCats = await prisma.blogPost.findMany({
+    select: { category: true },
+    distinct: ["category"],
+  });
+  const categories = allCats
+    .map((c) => c.category)
+    .filter((c): c is string => Boolean(c));
+
+  const totalCount = await prisma.blogPost.count();
+  const queryString = (extra: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (cat) params.set("cat", cat);
+    if (sp.status) params.set("status", sp.status);
+    for (const [k, v] of Object.entries(extra)) {
+      if (v === undefined) params.delete(k);
+      else params.set(k, v);
+    }
+    const s = params.toString();
+    return s ? `?${s}` : "";
+  };
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -79,6 +121,84 @@ export default async function BlogListPage(props: {
       </div>
 
       <Banner ok={sp.ok} error={sp.error} />
+
+      {/* Búsqueda */}
+      <form
+        method="GET"
+        action="/cms/blog"
+        className="mb-5 flex flex-wrap items-center gap-2"
+      >
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Buscar por título, excerpt o slug…"
+          className="min-w-[260px] flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white focus:border-orange/50 focus:outline-none"
+        />
+        {cat && <input type="hidden" name="cat" value={cat} />}
+        {sp.status && <input type="hidden" name="status" value={sp.status} />}
+        <button
+          type="submit"
+          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-white hover:bg-white/10"
+        >
+          Buscar
+        </button>
+        {(q || cat || sp.status) && (
+          <a
+            href="/cms/blog"
+            className="rounded-md px-3 py-2 text-[12px] text-white/55 hover:text-white"
+          >
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      {/* Filtros estado */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        <FilterChip
+          href={`/cms/blog${queryString({ status: undefined })}`}
+          active={!sp.status}
+          label={`Todos (${totalCount})`}
+        />
+        <FilterChip
+          href={`/cms/blog${queryString({ status: "published" })}`}
+          active={sp.status === "published"}
+          label="Publicados"
+        />
+        <FilterChip
+          href={`/cms/blog${queryString({ status: "draft" })}`}
+          active={sp.status === "draft"}
+          label="Borradores"
+        />
+      </div>
+
+      {/* Filtros categoría */}
+      {categories.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          <FilterChip
+            href={`/cms/blog${queryString({ cat: undefined })}`}
+            active={!cat}
+            label="Todas las categorías"
+          />
+          {categories.map((c) => (
+            <FilterChip
+              key={c}
+              href={`/cms/blog${queryString({ cat: c })}`}
+              active={cat === c}
+              label={c}
+            />
+          ))}
+        </div>
+      )}
+
+      {posts.length === 0 && (q || cat || sp.status) && (
+        <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-[13px] text-white/55">
+          No hay resultados.{" "}
+          <a href="/cms/blog" className="text-orange hover:underline">
+            Limpiar filtros
+          </a>
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-1 gap-3">
         {posts.length === 0 && (
@@ -211,6 +331,29 @@ export default async function BlogListPage(props: {
         </form>
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  href,
+  active,
+  label,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+        active
+          ? "border-orange/40 bg-orange/15 text-orange"
+          : "border-white/10 text-white/65 hover:bg-white/5 hover:text-white"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 

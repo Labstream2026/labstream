@@ -73,14 +73,30 @@ async function deleteProject(formData: FormData) {
 }
 
 export default async function PortfolioListPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
+  searchParams: Promise<{ ok?: string; error?: string; q?: string; cat?: string }>;
 }) {
   await requireCmsUser();
   const sp = await props.searchParams;
+  const q = sp.q?.trim() ?? "";
+  const cat = sp.cat as PortfolioCategory | undefined;
 
   const projects = await prisma.portfolioProject.findMany({
+    where: {
+      ...(cat ? { category: cat } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { client: { contains: q, mode: "insensitive" as const } },
+              { slug: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
     orderBy: [{ featured: "desc" }, { order: "asc" }, { year: "desc" }],
   });
+
+  const totalCount = await prisma.portfolioProject.count();
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -101,6 +117,57 @@ export default async function PortfolioListPage(props: {
       </div>
 
       <Banner ok={sp.ok} error={sp.error} />
+
+      {/* Búsqueda + filtros */}
+      <form
+        method="GET"
+        action="/cms/portfolio"
+        className="mb-5 flex flex-wrap items-center gap-2"
+      >
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Buscar por título, cliente o slug…"
+          className="min-w-[260px] flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white focus:border-orange/50 focus:outline-none"
+        />
+        {cat && <input type="hidden" name="cat" value={cat} />}
+        <button
+          type="submit"
+          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-white hover:bg-white/10"
+        >
+          Buscar
+        </button>
+        {(q || cat) && (
+          <a
+            href="/cms/portfolio"
+            className="rounded-md px-3 py-2 text-[12px] text-white/55 hover:text-white"
+          >
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        <FilterChip href="/cms/portfolio" active={!cat} label={`Todos (${totalCount})`} />
+        {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+          <FilterChip
+            key={k}
+            href={`/cms/portfolio?cat=${k}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            active={cat === k}
+            label={v}
+          />
+        ))}
+      </div>
+
+      {projects.length === 0 && (q || cat) && (
+        <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-[13px] text-white/55">
+          No hay resultados para tu búsqueda.{" "}
+          <a href="/cms/portfolio" className="text-orange hover:underline">
+            Limpiar filtros
+          </a>
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-1 gap-3">
         {projects.length === 0 && (
@@ -250,6 +317,29 @@ export default async function PortfolioListPage(props: {
         </form>
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  href,
+  active,
+  label,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+        active
+          ? "border-orange/40 bg-orange/15 text-orange"
+          : "border-white/10 text-white/65 hover:bg-white/5 hover:text-white"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 
