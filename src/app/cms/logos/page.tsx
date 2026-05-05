@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 async function saveLogo(formData: FormData) {
   "use server";
@@ -120,17 +121,14 @@ export default async function LogosPage(props: {
           >
             <input type="hidden" name="id" value={l.id} />
 
-            <div className="flex h-14 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.06] p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={l.logoUrl}
-                alt={l.name}
-                className="max-h-full max-w-full object-contain opacity-85"
-                referrerPolicy="no-referrer"
-              />
-            </div>
+            <ImageField
+              name="logoUrl"
+              defaultValue={l.logoUrl}
+              required
+              aspect="square"
+            />
 
-            <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+            <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-2">
               <input
                 name="name"
                 defaultValue={l.name}
@@ -139,17 +137,10 @@ export default async function LogosPage(props: {
                 className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] font-medium text-white focus:border-orange/50 focus:outline-none"
               />
               <input
-                name="logoUrl"
-                defaultValue={l.logoUrl}
-                required
-                placeholder="https://… SVG/PNG"
-                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white/85 focus:border-orange/50 focus:outline-none md:col-span-2"
-              />
-              <input
                 name="websiteUrl"
                 defaultValue={l.websiteUrl ?? ""}
                 placeholder="https://… (opcional)"
-                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white/70 focus:border-orange/50 focus:outline-none md:col-span-3"
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white/70 focus:border-orange/50 focus:outline-none"
               />
             </div>
 
@@ -211,41 +202,38 @@ export default async function LogosPage(props: {
         </h2>
         <form
           action={createLogo}
-          className="lg flex flex-wrap items-end gap-4 rounded-2xl p-6"
+          className="lg flex flex-col gap-4 rounded-2xl p-6"
         >
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-              Nombre marca
-            </span>
-            <input
-              name="name"
-              required
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
-            />
-          </label>
-          <label className="flex flex-1 min-w-[300px] flex-col gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-              URL del logo (SVG/PNG)
-            </span>
-            <input
-              name="logoUrl"
-              required
-              placeholder="https://…"
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
-            />
-          </label>
-          <label className="flex flex-1 min-w-[260px] flex-col gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-              Sitio web (opcional)
-            </span>
-            <input
-              name="websiteUrl"
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
-            />
-          </label>
-          <button type="submit" className="btn-primary">
-            Crear
-          </button>
+          <ImageField
+            name="logoUrl"
+            label="Logo (SVG / PNG transparente)"
+            required
+            aspect="square"
+          />
+          <div className="flex flex-wrap gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+                Nombre marca
+              </span>
+              <input
+                name="name"
+                required
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+              />
+            </label>
+            <label className="flex flex-1 min-w-[260px] flex-col gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
+                Sitio web (opcional)
+              </span>
+              <input
+                name="websiteUrl"
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white"
+              />
+            </label>
+            <button type="submit" className="btn-primary">
+              Crear
+            </button>
+          </div>
         </form>
       </div>
     </div>

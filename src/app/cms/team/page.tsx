@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 async function saveMember(formData: FormData) {
   "use server";
@@ -133,33 +134,14 @@ export default async function TeamPage(props: {
           >
             <input type="hidden" name="id" value={m.id} />
 
-            <div className="flex flex-shrink-0 flex-col items-center gap-2">
-              <div
-                className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white/[0.06] font-heading italic text-white"
-                style={{ fontSize: 24 }}
-              >
-                {m.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.photoUrl}
-                    alt={m.name}
-                    className="h-full w-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  m.name.charAt(0).toUpperCase()
-                )}
-              </div>
-              <input
-                name="order"
-                type="number"
-                defaultValue={m.order}
-                title="Orden"
-                className="w-16 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-center text-[12px] text-white focus:border-orange/50 focus:outline-none"
-              />
-            </div>
-
             <div className="flex flex-1 flex-col gap-2.5">
+              <ImageField
+                name="photoUrl"
+                label="Foto"
+                defaultValue={m.photoUrl}
+                aspect="square"
+              />
+
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 <Field name="name" label="Nombre" defaultValue={m.name} required />
                 <Field name="role" label="Rol" defaultValue={m.role} required />
@@ -177,12 +159,6 @@ export default async function TeamPage(props: {
                 />
               </label>
 
-              <Field
-                name="photoUrl"
-                label="Foto URL"
-                defaultValue={m.photoUrl ?? ""}
-                placeholder="https://…"
-              />
 
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <Field
@@ -206,6 +182,13 @@ export default async function TeamPage(props: {
               </div>
 
               <div className="flex items-center gap-3">
+                <input
+                  name="order"
+                  type="number"
+                  defaultValue={m.order}
+                  title="Orden"
+                  className="w-16 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-center text-[12px] text-white focus:border-orange/50 focus:outline-none"
+                />
                 <label className="flex items-center gap-1.5 text-[12px] text-white/70">
                   <input
                     type="checkbox"

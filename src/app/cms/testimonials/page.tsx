@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
@@ -167,14 +168,14 @@ export default async function TestimonialsPage(props: {
               />
             </label>
 
+            <ImageField
+              name="authorAvatarUrl"
+              label="Avatar"
+              defaultValue={t.authorAvatarUrl}
+              aspect="square"
+            />
+
             <div className="flex flex-wrap items-end gap-3">
-              <Field
-                name="authorAvatarUrl"
-                label="Avatar URL"
-                defaultValue={t.authorAvatarUrl ?? ""}
-                placeholder="https://… (opcional)"
-                wide
-              />
               <label className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
                   Rating

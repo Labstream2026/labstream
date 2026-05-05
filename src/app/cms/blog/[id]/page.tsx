@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 async function savePost(formData: FormData) {
   "use server";
@@ -153,25 +154,11 @@ export default async function BlogDetailPage(props: {
         </Section>
 
         <Section title="Imagen de portada">
-          <Labeled
-            label="URL de imagen"
-            help="Sube en /cms/assets y pega la URL aquí"
-          >
-            <Input
-              name="coverImageUrl"
-              defaultValue={post.coverImageUrl ?? ""}
-              placeholder="https://…"
-            />
-          </Labeled>
-          {post.coverImageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={post.coverImageUrl}
-              alt=""
-              className="aspect-video max-w-md rounded-lg object-cover"
-              referrerPolicy="no-referrer"
-            />
-          )}
+          <ImageField
+            name="coverImageUrl"
+            defaultValue={post.coverImageUrl}
+            aspect="video"
+          />
         </Section>
 
         <Section

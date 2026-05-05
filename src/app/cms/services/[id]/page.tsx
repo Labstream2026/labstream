@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
@@ -141,25 +142,13 @@ export default async function ServiceDetailPage(props: {
         <input type="hidden" name="id" value={svc.id} />
 
         <Section title="Hero del detalle">
-          <Labeled
-            label="Imagen de fondo del hero (URL)"
-            help="Imagen grande que aparece detrás del título. Sube en /cms/assets."
-          >
-            <Input
-              name="heroImageUrl"
-              defaultValue={svc.heroImageUrl ?? ""}
-              placeholder="https://…"
-            />
-          </Labeled>
-          {svc.heroImageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={svc.heroImageUrl}
-              alt=""
-              className="aspect-video max-w-md rounded-lg object-cover"
-              referrerPolicy="no-referrer"
-            />
-          )}
+          <ImageField
+            name="heroImageUrl"
+            label="Imagen de fondo del hero"
+            defaultValue={svc.heroImageUrl}
+            help="Imagen grande detrás del título"
+            aspect="wide"
+          />
           <Labeled
             label="Descripción larga"
             help="Párrafo amplio bajo el título del hero (2-4 líneas)"

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { PortfolioCategory, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { ImageField } from "@/components/cms/ImageField";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -269,25 +270,13 @@ export default async function PortfolioDetailPage(props: {
 
         {/* Sección 2: Media */}
         <Section title="Media">
-          <Labeled
-            label="Imagen de portada (URL)"
-            help="Aparece en la card y como hero del detalle. Sube en /cms/assets y pega la URL."
-          >
-            <Input
-              name="coverImageUrl"
-              defaultValue={project.coverImageUrl ?? ""}
-              placeholder="https://…"
-            />
-          </Labeled>
-          {project.coverImageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={project.coverImageUrl}
-              alt=""
-              className="aspect-video max-w-md rounded-lg object-cover"
-              referrerPolicy="no-referrer"
-            />
-          )}
+          <ImageField
+            name="coverImageUrl"
+            label="Imagen de portada"
+            defaultValue={project.coverImageUrl}
+            help="Aparece en la card del grid y como hero del detalle"
+            aspect="video"
+          />
           <Labeled
             label="Video URL"
             help="Vimeo, YouTube, Drive o MP4 directo. Auto-detectamos el embed."
