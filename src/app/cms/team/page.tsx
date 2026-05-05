@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { SortableList } from "@/components/cms/SortableList";
 
 async function saveMember(formData: FormData) {
   "use server";
@@ -74,6 +75,23 @@ async function createMember(formData: FormData) {
   redirect("/cms/team?ok=created");
 }
 
+async function reorderMembers(formData: FormData) {
+  "use server";
+  const me = await requireCmsUser();
+  if (!canEditPages(me.role)) return;
+  const ids = String(formData.get("orderedIds") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await prisma.$transaction(
+    ids.map((id, i) =>
+      prisma.teamMember.update({ where: { id }, data: { order: i } }),
+    ),
+  );
+  revalidatePath("/nosotros");
+  revalidatePath("/cms/team");
+}
+
 async function deleteMember(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -120,18 +138,20 @@ export default async function TeamPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <div className="flex flex-col gap-4">
-        {items.length === 0 && (
-          <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
-            Aún no hay miembros del equipo.
-          </div>
-        )}
-        {items.map((m) => (
-          <form
-            key={m.id}
-            action={saveMember}
-            className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row"
-          >
+      {items.length === 0 ? (
+        <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
+          Aún no hay miembros del equipo.
+        </div>
+      ) : (
+        <SortableList
+          reorderAction={reorderMembers}
+          items={items.map((m) => ({
+            id: m.id,
+            content: (
+              <form
+                action={saveMember}
+                className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row"
+              >
             <input type="hidden" name="id" value={m.id} />
 
             <div className="flex flex-1 flex-col gap-2.5">
@@ -182,13 +202,7 @@ export default async function TeamPage(props: {
               </div>
 
               <div className="flex items-center gap-3">
-                <input
-                  name="order"
-                  type="number"
-                  defaultValue={m.order}
-                  title="Orden"
-                  className="w-16 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-center text-[12px] text-white focus:border-orange/50 focus:outline-none"
-                />
+                <input type="hidden" name="order" value={m.order} />
                 <label className="flex items-center gap-1.5 text-[12px] text-white/70">
                   <input
                     type="checkbox"
@@ -205,6 +219,11 @@ export default async function TeamPage(props: {
                   />
                   Destacado
                 </label>
+                <DeleteButton
+                  action={deleteMember}
+                  id={m.id}
+                  label={`Eliminar a ${m.name}`}
+                />
                 <button
                   type="submit"
                   className="ml-auto rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-medium text-white hover:bg-white/10"
@@ -214,23 +233,10 @@ export default async function TeamPage(props: {
               </div>
             </div>
           </form>
-        ))}
-        {items.map((m) => (
-          <form
-            key={`del-${m.id}`}
-            action={deleteMember}
-            className="-mt-2 self-end"
-          >
-            <input type="hidden" name="id" value={m.id} />
-            <button
-              type="submit"
-              className="text-[11px] text-white/30 hover:text-red-300"
-            >
-              Eliminar a {m.name} ↗
-            </button>
-          </form>
-        ))}
-      </div>
+            ),
+          }))}
+        />
+      )}
 
       <div className="mt-12">
         <h2 className="mb-4 text-[16px] font-semibold text-white">
@@ -289,6 +295,29 @@ function Field({
         className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white focus:border-orange/50 focus:outline-none"
       />
     </label>
+  );
+}
+
+function DeleteButton({
+  action,
+  id,
+  label,
+}: {
+  action: (formData: FormData) => void;
+  id: string;
+  label: string;
+}) {
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
+        title={label}
+      >
+        Eliminar
+      </button>
+    </form>
   );
 }
 

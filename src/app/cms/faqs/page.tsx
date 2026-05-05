@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { SortableList } from "@/components/cms/SortableList";
 
 async function saveFaq(formData: FormData) {
   "use server";
@@ -60,6 +61,24 @@ async function createFaq(formData: FormData) {
   redirect("/cms/faqs?ok=created");
 }
 
+async function reorderFaqs(formData: FormData) {
+  "use server";
+  const me = await requireCmsUser();
+  if (!canEditPages(me.role)) return;
+  const ids = String(formData.get("orderedIds") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await prisma.$transaction(
+    ids.map((id, i) =>
+      prisma.faqItem.update({ where: { id }, data: { order: i } }),
+    ),
+  );
+  revalidatePath("/");
+  revalidatePath("/contacto");
+  revalidatePath("/cms/faqs");
+}
+
 async function deleteFaq(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -103,18 +122,20 @@ export default async function FaqsPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <div className="flex flex-col gap-4">
-        {items.length === 0 && (
-          <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
-            Aún no hay FAQs. Agrega la primera abajo.
-          </div>
-        )}
-        {items.map((f) => (
-          <form
-            key={f.id}
-            action={saveFaq}
-            className="lg flex flex-col gap-3 rounded-2xl p-5"
-          >
+      {items.length === 0 ? (
+        <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
+          Aún no hay FAQs. Agrega la primera abajo.
+        </div>
+      ) : (
+        <SortableList
+          reorderAction={reorderFaqs}
+          items={items.map((f) => ({
+            id: f.id,
+            content: (
+              <form
+                action={saveFaq}
+                className="lg flex flex-col gap-3 rounded-2xl p-5"
+              >
             <input type="hidden" name="id" value={f.id} />
 
             <label className="flex flex-col gap-1.5">
@@ -154,17 +175,7 @@ export default async function FaqsPage(props: {
                   className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-white focus:border-orange/50 focus:outline-none"
                 />
               </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-                  Orden
-                </span>
-                <input
-                  name="order"
-                  type="number"
-                  defaultValue={f.order}
-                  className="w-20 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[13px] text-white focus:border-orange/50 focus:outline-none"
-                />
-              </label>
+              <input type="hidden" name="order" value={f.order} />
               <label className="flex items-center gap-1.5 text-[12px] text-white/70">
                 <input
                   type="checkbox"
@@ -173,6 +184,7 @@ export default async function FaqsPage(props: {
                 />
                 Visible
               </label>
+              <DeleteButton action={deleteFaq} id={f.id} label="Eliminar FAQ" />
               <button
                 type="submit"
                 className="ml-auto rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-medium text-white hover:bg-white/10"
@@ -181,19 +193,10 @@ export default async function FaqsPage(props: {
               </button>
             </div>
           </form>
-        ))}
-        {items.map((f) => (
-          <form key={`del-${f.id}`} action={deleteFaq} className="-mt-2 self-end">
-            <input type="hidden" name="id" value={f.id} />
-            <button
-              type="submit"
-              className="text-[11px] text-white/30 hover:text-red-300"
-            >
-              Eliminar &quot;{f.question.slice(0, 40)}…&quot; ↗
-            </button>
-          </form>
-        ))}
-      </div>
+            ),
+          }))}
+        />
+      )}
 
       <div className="mt-12">
         <h2 className="mb-4 text-[16px] font-semibold text-white">
@@ -240,6 +243,29 @@ export default async function FaqsPage(props: {
         </form>
       </div>
     </div>
+  );
+}
+
+function DeleteButton({
+  action,
+  id,
+  label,
+}: {
+  action: (formData: FormData) => void;
+  id: string;
+  label: string;
+}) {
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
+        title={label}
+      >
+        Eliminar
+      </button>
+    </form>
   );
 }
 

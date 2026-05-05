@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { SortableList } from "@/components/cms/SortableList";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
@@ -78,6 +79,26 @@ async function createTestimonial(formData: FormData) {
   redirect("/cms/testimonials?ok=created");
 }
 
+async function reorderTestimonials(formData: FormData) {
+  "use server";
+  const me = await requireCmsUser();
+  if (!canEditPages(me.role)) return;
+
+  const ids = String(formData.get("orderedIds") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  await prisma.$transaction(
+    ids.map((id, i) =>
+      prisma.testimonial.update({ where: { id }, data: { order: i } }),
+    ),
+  );
+
+  revalidatePath("/");
+  revalidatePath("/cms/testimonials");
+}
+
 async function deleteTestimonial(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -120,18 +141,20 @@ export default async function TestimonialsPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <div className="flex flex-col gap-4">
-        {items.length === 0 && (
-          <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
-            No hay testimonios todavía. Agrega el primero abajo.
-          </div>
-        )}
-        {items.map((t) => (
-          <form
-            key={t.id}
-            action={saveTestimonial}
-            className="lg flex flex-col gap-3 rounded-2xl p-5"
-          >
+      {items.length === 0 ? (
+        <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
+          No hay testimonios todavía. Agrega el primero abajo.
+        </div>
+      ) : (
+        <SortableList
+          reorderAction={reorderTestimonials}
+          items={items.map((t) => ({
+            id: t.id,
+            content: (
+              <form
+                action={saveTestimonial}
+                className="lg flex flex-col gap-3 rounded-2xl p-5"
+              >
             <input type="hidden" name="id" value={t.id} />
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -217,7 +240,12 @@ export default async function TestimonialsPage(props: {
                 />
                 Destacado
               </label>
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto flex items-center gap-2">
+                <DeleteButton
+                  action={deleteTestimonial}
+                  id={t.id}
+                  label={`Eliminar a ${t.authorName}`}
+                />
                 <button
                   type="submit"
                   className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-medium text-white hover:bg-white/10"
@@ -227,23 +255,10 @@ export default async function TestimonialsPage(props: {
               </div>
             </div>
           </form>
-        ))}
-        {items.map((t) => (
-          <form
-            key={`del-${t.id}`}
-            action={deleteTestimonial}
-            className="-mt-2 self-end"
-          >
-            <input type="hidden" name="id" value={t.id} />
-            <button
-              type="submit"
-              className="text-[11px] text-white/30 hover:text-red-300"
-            >
-              Eliminar testimonio de {t.authorName} ↗
-            </button>
-          </form>
-        ))}
-      </div>
+            ),
+          }))}
+        />
+      )}
 
       <div className="mt-12">
         <h2 className="mb-4 text-[16px] font-semibold text-white">
@@ -273,6 +288,29 @@ export default async function TestimonialsPage(props: {
         </form>
       </div>
     </div>
+  );
+}
+
+function DeleteButton({
+  action,
+  id,
+  label,
+}: {
+  action: (formData: FormData) => void;
+  id: string;
+  label: string;
+}) {
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
+        title={label}
+      >
+        Eliminar
+      </button>
+    </form>
   );
 }
 

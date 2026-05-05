@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { SortableList } from "@/components/cms/SortableList";
 
 async function saveLogo(formData: FormData) {
   "use server";
@@ -61,6 +62,23 @@ async function createLogo(formData: FormData) {
   redirect("/cms/logos?ok=created");
 }
 
+async function reorderLogos(formData: FormData) {
+  "use server";
+  const me = await requireCmsUser();
+  if (!canEditPages(me.role)) return;
+  const ids = String(formData.get("orderedIds") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  await prisma.$transaction(
+    ids.map((id, i) =>
+      prisma.clientLogo.update({ where: { id }, data: { order: i } }),
+    ),
+  );
+  revalidatePath("/");
+  revalidatePath("/cms/logos");
+}
+
 async function deleteLogo(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -107,18 +125,20 @@ export default async function LogosPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <div className="flex flex-col gap-3">
-        {items.length === 0 && (
-          <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
-            Aún no hay logos. Agrega el primero abajo.
-          </div>
-        )}
-        {items.map((l) => (
-          <form
-            key={l.id}
-            action={saveLogo}
-            className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center"
-          >
+      {items.length === 0 ? (
+        <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
+          Aún no hay logos. Agrega el primero abajo.
+        </div>
+      ) : (
+        <SortableList
+          reorderAction={reorderLogos}
+          items={items.map((l) => ({
+            id: l.id,
+            content: (
+              <form
+                action={saveLogo}
+                className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center"
+              >
             <input type="hidden" name="id" value={l.id} />
 
             <ImageField
@@ -145,13 +165,7 @@ export default async function LogosPage(props: {
             </div>
 
             <div className="flex items-center gap-3">
-              <input
-                name="order"
-                type="number"
-                defaultValue={l.order}
-                title="Orden"
-                className="w-16 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-[13px] text-white focus:border-orange/50 focus:outline-none"
-              />
+              <input type="hidden" name="order" value={l.order} />
               <label
                 className="flex items-center gap-1.5 text-[12px] text-white/70"
                 title="Mostrar en home"
@@ -174,6 +188,7 @@ export default async function LogosPage(props: {
                 />
                 Dest
               </label>
+              <DeleteButton action={deleteLogo} id={l.id} label={`Eliminar logo ${l.name}`} />
               <button
                 type="submit"
                 className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-medium text-white hover:bg-white/10"
@@ -182,19 +197,10 @@ export default async function LogosPage(props: {
               </button>
             </div>
           </form>
-        ))}
-        {items.map((l) => (
-          <form key={`del-${l.id}`} action={deleteLogo} className="self-end">
-            <input type="hidden" name="id" value={l.id} />
-            <button
-              type="submit"
-              className="text-[11px] text-white/30 hover:text-red-300"
-            >
-              Eliminar logo {l.name} ↗
-            </button>
-          </form>
-        ))}
-      </div>
+            ),
+          }))}
+        />
+      )}
 
       <div className="mt-12">
         <h2 className="mb-4 text-[16px] font-semibold text-white">
@@ -237,6 +243,29 @@ export default async function LogosPage(props: {
         </form>
       </div>
     </div>
+  );
+}
+
+function DeleteButton({
+  action,
+  id,
+  label,
+}: {
+  action: (formData: FormData) => void;
+  id: string;
+  label: string;
+}) {
+  return (
+    <form action={action} className="inline">
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
+        title={label}
+      >
+        Eliminar
+      </button>
+    </form>
   );
 }
 
