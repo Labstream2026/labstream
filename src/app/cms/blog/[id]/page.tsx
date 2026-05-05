@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 
 async function savePost(formData: FormData) {
   "use server";
@@ -163,17 +164,9 @@ export default async function BlogDetailPage(props: {
 
         <Section
           title="Contenido"
-          help="Markdown soportado: ## títulos, **negrita**, *itálica*, `código`, listas con - o números, [links](url), > citas. Líneas en blanco separan párrafos."
+          help="Markdown con barra de herramientas y preview en vivo. La barra inserta sintaxis correcta; el preview muestra cómo se verá publicado."
         >
-          <Textarea
-            name="content"
-            defaultValue={post.content}
-            rows={20}
-            mono
-            placeholder="## Empezamos con el tratamiento
-
-Lorem ipsum…"
-          />
+          <MarkdownEditor name="content" defaultValue={post.content} rows={20} />
         </Section>
 
         <Section title="Autor">
