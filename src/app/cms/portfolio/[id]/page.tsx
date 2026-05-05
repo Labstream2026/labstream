@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioCategory, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { RowsEditor } from "@/components/cms/RowsEditor";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -22,67 +23,57 @@ type GalleryImg = { url: string; alt?: string; caption?: string };
 type BeforeAfter = { before: string; after: string; label?: string };
 type Credit = { role: string; name: string };
 
-function parseGallery(raw: string): GalleryImg[] {
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((p) => p.trim());
-      return {
-        url: parts[0] ?? "",
-        alt: parts[1] || undefined,
-        caption: parts[2] || undefined,
-      };
-    })
-    .filter((g) => g.url);
+function parseGalleryJson(raw: string): GalleryImg[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((r) => r && typeof r === "object")
+      .map((r) => ({
+        url: String(r.url ?? "").trim(),
+        alt: String(r.alt ?? "").trim() || undefined,
+        caption: String(r.caption ?? "").trim() || undefined,
+      }))
+      .filter((g) => g.url);
+  } catch {
+    return [];
+  }
 }
 
-function galleryToText(items: GalleryImg[]): string {
-  return items
-    .map(
-      (g) =>
-        `${g.url}${g.alt ? ` | ${g.alt}` : ""}${g.caption ? ` | ${g.caption}` : ""}`,
-    )
-    .join("\n");
+function parseBeforeAfterJson(raw: string): BeforeAfter[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((r) => r && typeof r === "object")
+      .map((r) => ({
+        before: String(r.before ?? "").trim(),
+        after: String(r.after ?? "").trim(),
+        label: String(r.label ?? "").trim() || undefined,
+      }))
+      .filter((b) => b.before && b.after);
+  } catch {
+    return [];
+  }
 }
 
-function parseBeforeAfter(raw: string): BeforeAfter[] {
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((p) => p.trim());
-      return {
-        before: parts[0] ?? "",
-        after: parts[1] ?? "",
-        label: parts[2] || undefined,
-      };
-    })
-    .filter((b) => b.before && b.after);
-}
-
-function beforeAfterToText(items: BeforeAfter[]): string {
-  return items
-    .map((b) => `${b.before} | ${b.after}${b.label ? ` | ${b.label}` : ""}`)
-    .join("\n");
-}
-
-function parseCredits(raw: string): Credit[] {
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((p) => p.trim());
-      return { role: parts[0] ?? "", name: parts[1] ?? "" };
-    })
-    .filter((c) => c.role && c.name);
-}
-
-function creditsToText(items: Credit[]): string {
-  return items.map((c) => `${c.role} | ${c.name}`).join("\n");
+function parseCreditsJson(raw: string): Credit[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((r) => r && typeof r === "object")
+      .map((r) => ({
+        role: String(r.role ?? "").trim(),
+        name: String(r.name ?? "").trim(),
+      }))
+      .filter((c) => c.role && c.name);
+  } catch {
+    return [];
+  }
 }
 
 async function saveProject(formData: FormData) {
@@ -110,20 +101,29 @@ async function saveProject(formData: FormData) {
     String(formData.get("coverImageUrl") ?? "").trim() || null;
   const videoUrl = String(formData.get("videoUrl") ?? "").trim() || null;
 
-  const galleryRaw = String(formData.get("galleryImages") ?? "").trim();
-  const gallery = galleryRaw
-    ? (parseGallery(galleryRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const galleryArr = parseGalleryJson(
+    String(formData.get("galleryImages") ?? "").trim(),
+  );
+  const gallery =
+    galleryArr.length > 0
+      ? (galleryArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
-  const baRaw = String(formData.get("beforeAfter") ?? "").trim();
-  const beforeAfter = baRaw
-    ? (parseBeforeAfter(baRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const baArr = parseBeforeAfterJson(
+    String(formData.get("beforeAfter") ?? "").trim(),
+  );
+  const beforeAfter =
+    baArr.length > 0
+      ? (baArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
-  const creditsRaw = String(formData.get("credits") ?? "").trim();
-  const credits = creditsRaw
-    ? (parseCredits(creditsRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const creditsArr = parseCreditsJson(
+    String(formData.get("credits") ?? "").trim(),
+  );
+  const credits =
+    creditsArr.length > 0
+      ? (creditsArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
@@ -303,58 +303,49 @@ export default async function PortfolioDetailPage(props: {
         </Section>
 
         {/* Sección 4: Galería */}
-        <Section
-          title="Galería"
-          help="Una imagen por línea. Formato: URL | alt (opcional) | caption (opcional). Ejemplo: https://… | Foto de set | Día 1 de rodaje"
-        >
-          <Textarea
+        <Section title="Galería" help="Imágenes adicionales que aparecen en el grid del detalle.">
+          <RowsEditor
             name="galleryImages"
-            defaultValue={galleryToText(gallery)}
-            rows={5}
-            placeholder="https://… | alt | caption"
-            mono
+            defaultValue={gallery}
+            addLabel="+ Añadir imagen"
+            emptyHint="Sin imágenes en la galería."
+            fields={[
+              { key: "url", label: "Imagen", type: "image", span: 4 },
+              { key: "alt", label: "Alt (a11y)", placeholder: "Foto del set", span: 1 },
+              { key: "caption", label: "Caption", placeholder: "Día 1", span: 1 },
+            ]}
           />
-          {gallery.length > 0 && (
-            <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-6">
-              {gallery.map((g, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  src={g.url}
-                  alt={g.alt ?? ""}
-                  className="aspect-square rounded object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ))}
-            </div>
-          )}
         </Section>
 
         {/* Sección 5: Before/After */}
         <Section
           title="Before / After"
-          help="Una pareja por línea. Formato: BEFORE_URL | AFTER_URL | label (opcional)"
+          help="Parejas de imágenes para el slider comparativo del detalle."
         >
-          <Textarea
+          <RowsEditor
             name="beforeAfter"
-            defaultValue={beforeAfterToText(ba)}
-            rows={3}
-            placeholder="https://before.jpg | https://after.jpg | Color"
-            mono
+            defaultValue={ba}
+            addLabel="+ Añadir comparación"
+            emptyHint="Sin comparaciones."
+            fields={[
+              { key: "before", label: "Antes", type: "image", span: 3 },
+              { key: "after", label: "Después", type: "image", span: 3 },
+              { key: "label", label: "Etiqueta (opcional)", placeholder: "Color", span: 6 },
+            ]}
           />
         </Section>
 
         {/* Sección 6: Créditos */}
-        <Section
-          title="Créditos"
-          help="Una persona por línea. Formato: ROL | NOMBRE"
-        >
-          <Textarea
+        <Section title="Créditos" help="Equipo que trabajó en el proyecto.">
+          <RowsEditor
             name="credits"
-            defaultValue={creditsToText(credits)}
-            rows={6}
-            placeholder="Director | Carlos Ruiz&#10;DOP | Ana Torres&#10;Editor | Mateo Ariza"
-            mono
+            defaultValue={credits}
+            addLabel="+ Añadir crédito"
+            emptyHint="Sin créditos."
+            fields={[
+              { key: "role", label: "Rol", placeholder: "Director", span: 1 },
+              { key: "name", label: "Nombre", placeholder: "Carlos Ruiz", span: 2 },
+            ]}
           />
         </Section>
 

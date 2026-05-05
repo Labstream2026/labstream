@@ -5,48 +5,36 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
+import { RowsEditor } from "@/components/cms/RowsEditor";
 
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
 
-function parseCapabilities(raw: string): Capability[] {
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((p) => p.trim());
-      return {
-        icon: parts[0] ?? "•",
-        title: parts[1] ?? "",
-        desc: parts.slice(2).join(" | "),
-      };
-    })
-    .filter((c) => c.title);
-}
-
-function capabilitiesToText(items: Capability[]): string {
-  return items.map((c) => `${c.icon} | ${c.title} | ${c.desc}`).join("\n");
-}
-
-function parseProcess(raw: string): ProcessStep[] {
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split("|").map((p) => p.trim());
-      return {
-        step: parts[0] ?? "",
-        title: parts[1] ?? "",
-        desc: parts.slice(2).join(" | "),
-      };
-    })
-    .filter((p) => p.title);
-}
-
-function processToText(items: ProcessStep[]): string {
-  return items.map((p) => `${p.step} | ${p.title} | ${p.desc}`).join("\n");
+function parseRowsJson<T extends Record<string, string>>(
+  raw: string,
+  defaults: Record<keyof T, string>,
+  required: keyof T,
+): T[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((r) => r && typeof r === "object")
+      .map((r) => {
+        const out = {} as T;
+        for (const k in defaults) {
+          out[k] = (String(r[k] ?? defaults[k]).trim() || defaults[k]) as T[Extract<
+            keyof T,
+            string
+          >];
+        }
+        return out;
+      })
+      .filter((r) => String(r[required]).trim());
+  } catch {
+    return [];
+  }
 }
 
 async function saveServiceDetail(formData: FormData) {
@@ -61,15 +49,25 @@ async function saveServiceDetail(formData: FormData) {
     String(formData.get("heroImageUrl") ?? "").trim() || null;
   const pricing = String(formData.get("pricing") ?? "").trim() || null;
 
-  const capRaw = String(formData.get("capabilities") ?? "").trim();
-  const capabilities = capRaw
-    ? (parseCapabilities(capRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const capArr = parseRowsJson<Capability>(
+    String(formData.get("capabilities") ?? "").trim(),
+    { icon: "•", title: "", desc: "" },
+    "title",
+  );
+  const capabilities =
+    capArr.length > 0
+      ? (capArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
-  const processRaw = String(formData.get("process") ?? "").trim();
-  const process = processRaw
-    ? (parseProcess(processRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const procArr = parseRowsJson<ProcessStep>(
+    String(formData.get("process") ?? "").trim(),
+    { step: "", title: "", desc: "" },
+    "title",
+  );
+  const process =
+    procArr.length > 0
+      ? (procArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
   const svc = await prisma.service.findUnique({ where: { id } });
   if (!svc) redirect(`/cms/services?error=invalid`);
@@ -163,29 +161,47 @@ export default async function ServiceDetailPage(props: {
 
         <Section
           title="Capacidades"
-          help="Una capacidad por línea. Formato: ICONO | TÍTULO | DESCRIPCIÓN. Aparecen en el grid 'Capacidades'."
+          help="Bloques que aparecen en el grid 'Capacidades' del detalle."
         >
-          <Textarea
+          <RowsEditor
             name="capabilities"
-            defaultValue={capabilitiesToText(capabilities)}
-            rows={6}
-            mono
-            placeholder="🎬 | Comerciales TV | Spots de 15s a 90s
-📹 | Branded content | Historias de marca"
+            defaultValue={capabilities}
+            addLabel="+ Añadir capacidad"
+            emptyHint="Sin capacidades. Añade la primera abajo."
+            fields={[
+              { key: "icon", label: "Icono", placeholder: "🎬", span: 1 },
+              { key: "title", label: "Título", placeholder: "Comerciales TV", span: 2 },
+              {
+                key: "desc",
+                label: "Descripción",
+                placeholder: "Spots de 15s a 90s",
+                type: "textarea",
+                span: 3,
+              },
+            ]}
           />
         </Section>
 
         <Section
           title="Proceso"
-          help="Un paso por línea. Formato: NÚMERO | TÍTULO | DESCRIPCIÓN. Aparecen como tarjetas numeradas."
+          help="Pasos numerados que aparecen como tarjetas en orden."
         >
-          <Textarea
+          <RowsEditor
             name="process"
-            defaultValue={processToText(process)}
-            rows={6}
-            mono
-            placeholder="01 | Brief | Entendemos el objetivo
-02 | Tratamiento | Propuesta visual y narrativa"
+            defaultValue={process}
+            addLabel="+ Añadir paso"
+            emptyHint="Sin pasos. Añade el primero."
+            fields={[
+              { key: "step", label: "Número", placeholder: "01", span: 1 },
+              { key: "title", label: "Título", placeholder: "Brief", span: 2 },
+              {
+                key: "desc",
+                label: "Descripción",
+                placeholder: "Entendemos el objetivo",
+                type: "textarea",
+                span: 3,
+              },
+            ]}
           />
         </Section>
 

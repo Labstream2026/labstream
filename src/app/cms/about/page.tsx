@@ -3,29 +3,26 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { Prisma } from "@prisma/client";
+import { RowsEditor } from "@/components/cms/RowsEditor";
 
 type ValueItem = { icon: string; title: string; desc: string };
 
-function parseValues(raw: string): ValueItem[] {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const out: ValueItem[] = [];
-  for (const line of lines) {
-    // Format: ICON | TITLE | DESC
-    const parts = line.split("|").map((p) => p.trim());
-    if (parts.length >= 3) {
-      out.push({ icon: parts[0], title: parts[1], desc: parts.slice(2).join(" | ") });
-    } else if (parts.length === 2) {
-      out.push({ icon: "•", title: parts[0], desc: parts[1] });
-    }
+function parseValuesJson(raw: string): ValueItem[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((r) => r && typeof r === "object")
+      .map((r) => ({
+        icon: String(r.icon ?? "").trim() || "•",
+        title: String(r.title ?? "").trim(),
+        desc: String(r.desc ?? "").trim(),
+      }))
+      .filter((r) => r.title);
+  } catch {
+    return [];
   }
-  return out;
-}
-
-function valuesToText(values: ValueItem[]): string {
-  return values.map((v) => `${v.icon} | ${v.title} | ${v.desc}`).join("\n");
 }
 
 async function saveAbout(formData: FormData) {
@@ -42,9 +39,11 @@ async function saveAbout(formData: FormData) {
   const mission = String(formData.get("mission") ?? "").trim() || null;
   const vision = String(formData.get("vision") ?? "").trim() || null;
   const valuesRaw = String(formData.get("values") ?? "").trim();
-  const values = valuesRaw
-    ? (parseValues(valuesRaw) as unknown as Prisma.InputJsonValue)
-    : Prisma.JsonNull;
+  const valuesArr = parseValuesJson(valuesRaw);
+  const values =
+    valuesArr.length > 0
+      ? (valuesArr as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
   await prisma.aboutContent.upsert({
     where: { id: "singleton" },
@@ -167,16 +166,23 @@ export default async function AboutPage(props: {
           </Labeled>
         </div>
 
-        <Labeled
-          label="Valores"
-          help="Una línea por valor. Formato: ICONO | TÍTULO | DESCRIPCIÓN. Ejemplo: 🎬 | Cine en todo | Aplicamos criterio cinematográfico a cualquier formato."
-        >
-          <textarea
+        <Labeled label="Valores" help="Cada valor con icono, título y descripción.">
+          <RowsEditor
             name="values"
-            defaultValue={valuesToText(valuesArr)}
-            rows={6}
-            placeholder="🎬 | Cine en todo | Aplicamos criterio cinematográfico…"
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 font-mono text-[12px] leading-relaxed text-white focus:border-orange/50 focus:outline-none"
+            defaultValue={valuesArr}
+            addLabel="+ Añadir valor"
+            emptyHint="Sin valores definidos."
+            fields={[
+              { key: "icon", label: "Icono", placeholder: "🎬", span: 1 },
+              { key: "title", label: "Título", placeholder: "Cine en todo", span: 2 },
+              {
+                key: "desc",
+                label: "Descripción",
+                placeholder: "Aplicamos criterio cinematográfico…",
+                type: "textarea",
+                span: 3,
+              },
+            ]}
           />
         </Labeled>
 
