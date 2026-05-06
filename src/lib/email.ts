@@ -23,6 +23,9 @@ export async function sendEmail(args: SendArgs): Promise<{
   skipped?: boolean;
 }> {
   const c = client();
+  // EMAIL_FROM must use a Resend-verified domain. Falls back to Resend's
+  // shared onboarding domain so dev never breaks; reply-to keeps the human
+  // routing correct even when the From shows resend.dev.
   const from = process.env.EMAIL_FROM ?? "Labstream <onboarding@resend.dev>";
 
   if (!c) {

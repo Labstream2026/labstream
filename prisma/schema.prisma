@@ -760,3 +760,28 @@ model AboutContent {
   values        Json?    // [{ icon, title, desc }, ...]
   updatedAt     DateTime @updatedAt
 }
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  WON
+  LOST
+  SPAM
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  name        String
+  email       String
+  message     String     @db.Text
+  source      String?    // "contact-form" | "newsletter-modal" | etc
+  metadata    Json?      // empresa, teléfono, servicio, presupuesto, cronograma
+  status      LeadStatus @default(NEW)
+  notes       String?    @db.Text  // notas internas del equipo
+  contactedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}
