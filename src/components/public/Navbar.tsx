@@ -160,10 +160,20 @@ export function Navbar() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <Link
-              href="/cms"
-              className="lg flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-semibold tracking-wider text-white"
+              href="/cms/login"
+              aria-label="Acceso clientes"
+              title="Si ya eres cliente, accede a tu panel"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-orange/40 bg-orange/[0.08] px-3.5 py-1.5 text-[12px] font-semibold text-orange transition-colors hover:bg-orange/15"
             >
-              Portal <ArrowUpRight className="h-3 w-3" />
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path
+                  d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14a6 6 0 1112 0H2z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Clientes
             </Link>
           </div>
 
@@ -265,10 +275,18 @@ export function Navbar() {
               Hablemos <ArrowUpRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/cms"
-              className="lg flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[13px] font-semibold tracking-wider text-white"
+              href="/cms/login"
+              className="flex items-center justify-center gap-2 rounded-full border border-orange/40 bg-orange/[0.08] px-5 py-3 text-[14px] font-semibold text-orange"
             >
-              Portal CMS <ArrowUpRight className="h-3.5 w-3.5" />
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path
+                  d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14a6 6 0 1112 0H2z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Acceso clientes
             </Link>
           </div>
         </div>

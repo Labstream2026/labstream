@@ -126,9 +126,20 @@ export async function Footer() {
                   </a>
                 </li>
               )}
-              <li>
-                <Link href="/cms" className="transition-colors hover:text-white">
-                  Acceso CMS / Portal ↗
+              <li className="pt-3">
+                <Link
+                  href="/cms/login"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-orange/40 bg-orange/[0.08] px-3 py-1 text-[12px] font-semibold text-orange transition-colors hover:bg-orange/15"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+                    <path
+                      d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14a6 6 0 1112 0H2z"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Acceso clientes
                 </Link>
               </li>
             </ul>

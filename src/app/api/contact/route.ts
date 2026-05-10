@@ -27,8 +27,12 @@ export async function POST(req: Request) {
   const teamInbox =
     process.env.CONTACT_EMAIL_TO ||
     settings?.contactEmail ||
-    "hola@labstream.co";
+    "contacto@labstreamsas.com";
   const siteName = settings?.siteName ?? "Labstream Studio";
+  // Remitente específico para emails del formulario de contacto público.
+  // Cae a EMAIL_FROM si no está configurado.
+  const contactFrom =
+    process.env.EMAIL_FROM_CONTACT || process.env.EMAIL_FROM;
 
   // 1. Save to DB so the team has an inbox even if email fails
   await prisma.lead
@@ -68,6 +72,7 @@ export async function POST(req: Request) {
     subject: teamSubject,
     html: teamHtml,
     replyTo: email,
+    from: contactFrom,
   });
 
   // 3. Send auto-reply to the customer (best-effort, don't fail the request if this fails)
@@ -101,6 +106,7 @@ export async function POST(req: Request) {
     subject: customerSubject,
     html: customerHtml,
     replyTo: teamInbox,
+    from: contactFrom,
   });
 
   if (!teamResult.ok) {

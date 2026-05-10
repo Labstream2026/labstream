@@ -59,6 +59,12 @@ type SendArgs = {
   subject: string;
   html: string;
   replyTo?: string;
+  /**
+   * Override del remitente. Si no se pasa, usa EMAIL_FROM (default de la
+   * webapp). Para el form de contacto público usamos EMAIL_FROM_CONTACT
+   * (contacto@labstreamsas.com) para separar audiencias.
+   */
+  from?: string;
 };
 
 export type SendResult = {
@@ -76,7 +82,9 @@ export type SendResult = {
  */
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
   const from =
-    process.env.EMAIL_FROM ?? "Labstream <onboarding@resend.dev>";
+    args.from ??
+    process.env.EMAIL_FROM ??
+    "Labstream <onboarding@resend.dev>";
 
   const smtp = getSmtp();
   if (smtp) {
