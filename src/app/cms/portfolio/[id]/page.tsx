@@ -6,6 +6,7 @@ import { PortfolioCategory, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -161,6 +162,7 @@ async function saveProject(formData: FormData) {
       tags,
       featured,
       order,
+      draft: Prisma.JsonNull,
     },
   });
 
@@ -217,11 +219,16 @@ export default async function PortfolioDetailPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <form
-        action={saveProject}
-        className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+      <LivePreview
+        model="portfolio"
+        recordId={project.id}
+        previewPath={`/portafolio/${project.slug}`}
       >
-        <input type="hidden" name="id" value={project.id} />
+        <form
+          action={saveProject}
+          className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+        >
+          <input type="hidden" name="id" value={project.id} />
 
         {/* Sección 1: Básicos */}
         <Section title="Básicos">
@@ -371,18 +378,19 @@ export default async function PortfolioDetailPage(props: {
           </div>
         </Section>
 
-        <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
-          <Link
-            href="/cms/portfolio"
-            className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
-          >
-            Cancelar
-          </Link>
-          <button type="submit" className="btn-primary">
-            Guardar cambios
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
+            <Link
+              href="/cms/portfolio"
+              className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
+            >
+              Cancelar
+            </Link>
+            <button type="submit" className="btn-primary">
+              Guardar cambios
+            </button>
+          </div>
+        </form>
+      </LivePreview>
     </div>
   );
 }

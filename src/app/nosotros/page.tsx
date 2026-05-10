@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { isPreviewMode, mergeDraft } from "@/lib/preview";
 import { Navbar } from "@/components/public/Navbar";
 import { ScrollProgress } from "@/components/public/ScrollProgress";
 import { WhatsAppFloat } from "@/components/public/WhatsAppFloat";
@@ -13,8 +14,12 @@ export const metadata = {
   description: "12 años produciendo audiovisual en LATAM. Conoce al equipo y la historia detrás de Labstream Studio.",
 };
 
-export default async function NosotrosPage() {
-  const [about, team] = await Promise.all([
+export default async function NosotrosPage(props: {
+  searchParams?: Promise<{ preview?: string }>;
+}) {
+  const sp = props.searchParams ? await props.searchParams : {};
+  const preview = await isPreviewMode(sp);
+  const [aboutFound, team] = await Promise.all([
     prisma.aboutContent.findUnique({ where: { id: "singleton" } }),
     prisma.teamMember.findMany({
       where: { visible: true },
@@ -22,6 +27,8 @@ export default async function NosotrosPage() {
     }),
   ]);
 
+  const about =
+    preview && aboutFound ? mergeDraft(aboutFound, aboutFound.draft) : aboutFound;
   const values = (about?.values as Array<{ icon: string; title: string; desc: string }>) ?? [];
 
   return (

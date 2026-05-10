@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PortfolioCategory } from "@prisma/client";
+import { isPreviewMode, mergeDraft } from "@/lib/preview";
 import { Navbar } from "@/components/public/Navbar";
 import { ScrollProgress } from "@/components/public/ScrollProgress";
 import { WhatsAppFloat } from "@/components/public/WhatsAppFloat";
@@ -47,10 +48,14 @@ export async function generateMetadata(props: {
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { slug } = await props.params;
-  const project = await prisma.portfolioProject.findUnique({ where: { slug } });
-  if (!project) notFound();
+  const sp = await props.searchParams;
+  const preview = await isPreviewMode(sp);
+  const found = await prisma.portfolioProject.findUnique({ where: { slug } });
+  if (!found) notFound();
+  const project = preview ? mergeDraft(found, found.draft) : found;
 
   const others = await prisma.portfolioProject.findMany({
     where: { id: { not: project.id }, category: project.category },

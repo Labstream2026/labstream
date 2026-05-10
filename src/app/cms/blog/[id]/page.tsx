@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { BlogPostStatus } from "@prisma/client";
+import { BlogPostStatus, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 async function savePost(formData: FormData) {
   "use server";
@@ -62,6 +63,7 @@ async function savePost(formData: FormData) {
       tags,
       status,
       readMinutes,
+      draft: Prisma.JsonNull,
       ...(justPublished ? { publishedAt: new Date() } : {}),
     },
   });
@@ -117,11 +119,16 @@ export default async function BlogDetailPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <form
-        action={savePost}
-        className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+      <LivePreview
+        model="blog"
+        recordId={post.id}
+        previewPath={`/blog/${post.slug}`}
       >
-        <input type="hidden" name="id" value={post.id} />
+        <form
+          action={savePost}
+          className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+        >
+          <input type="hidden" name="id" value={post.id} />
 
         <Section title="Básicos">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -216,18 +223,19 @@ export default async function BlogDetailPage(props: {
           </div>
         </Section>
 
-        <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
-          <Link
-            href="/cms/blog"
-            className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
-          >
-            Cancelar
-          </Link>
-          <button type="submit" className="btn-primary">
-            Guardar
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
+            <Link
+              href="/cms/blog"
+              className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
+            >
+              Cancelar
+            </Link>
+            <button type="submit" className="btn-primary">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </LivePreview>
     </div>
   );
 }

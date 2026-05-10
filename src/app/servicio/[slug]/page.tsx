@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { isPreviewMode, mergeDraft } from "@/lib/preview";
 import { Navbar } from "@/components/public/Navbar";
 import { ScrollProgress } from "@/components/public/ScrollProgress";
 import { WhatsAppFloat } from "@/components/public/WhatsAppFloat";
@@ -23,10 +24,14 @@ export async function generateMetadata(props: {
 
 export default async function ServicioDetailPage(props: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { slug } = await props.params;
-  const service = await prisma.service.findUnique({ where: { slug } });
-  if (!service) notFound();
+  const sp = await props.searchParams;
+  const preview = await isPreviewMode(sp);
+  const found = await prisma.service.findUnique({ where: { slug } });
+  if (!found) notFound();
+  const service = preview ? mergeDraft(found, found.draft) : found;
 
   const others = await prisma.service.findMany({
     where: { id: { not: service.id }, visible: true },

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { Prisma } from "@prisma/client";
 import { RowsEditor } from "@/components/cms/RowsEditor";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 type ValueItem = { icon: string; title: string; desc: string };
 
@@ -55,6 +56,7 @@ async function saveAbout(formData: FormData) {
       mission,
       vision,
       values,
+      draft: Prisma.JsonNull,
     },
     create: {
       id: "singleton",
@@ -79,11 +81,13 @@ export default async function AboutPage(props: {
   await requireCmsUser();
   const sp = await props.searchParams;
 
-  const about = await prisma.aboutContent.findUnique({
+  const about = await prisma.aboutContent.upsert({
     where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
   });
 
-  const valuesArr = (about?.values as ValueItem[] | null) ?? [];
+  const valuesArr = (about.values as ValueItem[] | null) ?? [];
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -105,7 +109,12 @@ export default async function AboutPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <form action={saveAbout} className="lg flex flex-col gap-5 rounded-2xl p-6 md:p-8">
+      <LivePreview
+        model="about"
+        recordId="singleton"
+        previewPath="/nosotros"
+      >
+        <form action={saveAbout} className="lg flex flex-col gap-5 rounded-2xl p-6 md:p-8">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Labeled
             label="Eyebrow"
@@ -113,14 +122,14 @@ export default async function AboutPage(props: {
           >
             <input
               name="heroEyebrow"
-              defaultValue={about?.heroEyebrow ?? ""}
+              defaultValue={about.heroEyebrow ?? ""}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
           </Labeled>
           <Labeled label="Título hero" help="El título italic principal" wide>
             <input
               name="heroTitle"
-              defaultValue={about?.heroTitle ?? ""}
+              defaultValue={about.heroTitle ?? ""}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[14px] text-white focus:border-orange/50 focus:outline-none"
             />
           </Labeled>
@@ -129,7 +138,7 @@ export default async function AboutPage(props: {
         <Labeled label="Subtítulo" help="Párrafo que aparece debajo del título">
           <textarea
             name="heroSubtitle"
-            defaultValue={about?.heroSubtitle ?? ""}
+            defaultValue={about.heroSubtitle ?? ""}
             rows={2}
             className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
           />
@@ -141,7 +150,7 @@ export default async function AboutPage(props: {
         >
           <textarea
             name="story"
-            defaultValue={about?.story ?? ""}
+            defaultValue={about.story ?? ""}
             rows={8}
             className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] leading-relaxed text-white focus:border-orange/50 focus:outline-none"
           />
@@ -151,7 +160,7 @@ export default async function AboutPage(props: {
           <Labeled label="Misión">
             <textarea
               name="mission"
-              defaultValue={about?.mission ?? ""}
+              defaultValue={about.mission ?? ""}
               rows={3}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
@@ -159,7 +168,7 @@ export default async function AboutPage(props: {
           <Labeled label="Visión">
             <textarea
               name="vision"
-              defaultValue={about?.vision ?? ""}
+              defaultValue={about.vision ?? ""}
               rows={3}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
@@ -192,6 +201,7 @@ export default async function AboutPage(props: {
           </button>
         </div>
       </form>
+      </LivePreview>
 
       <div className="mt-8 rounded-xl border border-white/5 bg-white/[0.02] p-5 text-[12px] text-white/55">
         <div className="mb-2 font-semibold text-white/75">

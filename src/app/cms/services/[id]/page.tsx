@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
@@ -74,7 +75,14 @@ async function saveServiceDetail(formData: FormData) {
 
   await prisma.service.update({
     where: { id },
-    data: { longDescription, heroImageUrl, pricing, capabilities, process },
+    data: {
+      longDescription,
+      heroImageUrl,
+      pricing,
+      capabilities,
+      process,
+      draft: Prisma.JsonNull,
+    },
   });
 
   revalidatePath("/servicios");
@@ -133,11 +141,16 @@ export default async function ServiceDetailPage(props: {
 
       <Banner ok={sp.ok} error={sp.error} />
 
-      <form
-        action={saveServiceDetail}
-        className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+      <LivePreview
+        model="service"
+        recordId={svc.id}
+        previewPath={`/servicio/${svc.slug}`}
       >
-        <input type="hidden" name="id" value={svc.id} />
+        <form
+          action={saveServiceDetail}
+          className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
+        >
+          <input type="hidden" name="id" value={svc.id} />
 
         <Section title="Hero del detalle">
           <ImageField
@@ -218,18 +231,19 @@ export default async function ServiceDetailPage(props: {
           </Labeled>
         </Section>
 
-        <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
-          <Link
-            href="/cms/services"
-            className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
-          >
-            Cancelar
-          </Link>
-          <button type="submit" className="btn-primary">
-            Guardar
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
+            <Link
+              href="/cms/services"
+              className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
+            >
+              Cancelar
+            </Link>
+            <button type="submit" className="btn-primary">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </LivePreview>
     </div>
   );
 }

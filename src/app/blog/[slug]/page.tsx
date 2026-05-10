@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
+import { isPreviewMode, mergeDraft } from "@/lib/preview";
 import { Navbar } from "@/components/public/Navbar";
 import { ScrollProgress } from "@/components/public/ScrollProgress";
 import { WhatsAppFloat } from "@/components/public/WhatsAppFloat";
@@ -149,10 +150,15 @@ function renderMarkdown(md: string): string {
 
 export default async function BlogPostPage(props: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { slug } = await props.params;
-  const post = await prisma.blogPost.findUnique({ where: { slug } });
-  if (!post || post.status !== BlogPostStatus.PUBLISHED) notFound();
+  const sp = await props.searchParams;
+  const preview = await isPreviewMode(sp);
+  const found = await prisma.blogPost.findUnique({ where: { slug } });
+  if (!found) notFound();
+  if (!preview && found.status !== BlogPostStatus.PUBLISHED) notFound();
+  const post = preview ? mergeDraft(found, found.draft) : found;
 
   const related = await prisma.blogPost.findMany({
     where: {
