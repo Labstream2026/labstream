@@ -182,6 +182,8 @@ model User {
   versionsSubmitted  DeliverableVersion[]
   approvalsGiven     Approval[]
   commentsAuthored   Comment[]
+  commentsResolved   Comment[]            @relation("CommentResolver")
+  reviewLinksCreated ReviewLink[]         @relation("ReviewLinkCreator")
   activityActor      ActivityLog[]        @relation("ActivityActor")
 
   @@index([email])
@@ -275,6 +277,7 @@ model Asset {
   pageOgImages       Page[]               @relation("PageOgImage")
   servicesCover      Service[]            @relation("ServiceCover")
   versionsAttached   DeliverableVersion[]
+  commentFrames      Comment[]            @relation("CommentFrame")
 
   @@index([source])
   @@index([uploadedById])
@@ -562,6 +565,7 @@ model DeliverableVersion {
   isCurrent  Deliverable? @relation("CurrentVersion")
   comments   Comment[]
   approvals  Approval[]
+  reviewLinks ReviewLink[]
 
   @@unique([deliverableId, versionNumber])
   @@index([driveFolderId])
@@ -588,13 +592,85 @@ model Comment {
   id            String   @id @default(cuid())
   versionId     String
   version       DeliverableVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  authorId      String
-  author        User     @relation(fields: [authorId], references: [id])
-  body          String
-  timecodeSeconds Int?   // reservado para fase 2.4 (comentarios con timecode)
+
+  // Autor: o usuario logueado (authorId) o invitado (guestName + guestEmail)
+  authorId      String?
+  author        User?    @relation(fields: [authorId], references: [id])
+  guestName     String?
+  guestEmail    String?
+
+  body          String   @db.Text
+  timecodeSeconds Int?   // legacy — mantener compatibilidad
+  videoTimeMs   Int?     // tiempo en ms en el video (preciso por frame)
+
+  // Captura de frame opcional + dibujo encima
+  frameAssetId  String?
+  frameAsset    Asset?   @relation("CommentFrame", fields: [frameAssetId], references: [id])
+  annotationsJson Json?  // [{ kind, color, ...coords }] coords normalizadas 0-1
+
+  // Threading: respuestas de equipo / cliente al comentario raíz
+  parentId      String?
+  parent        Comment? @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentThread")
+
+  // Estado
+  resolved      Boolean   @default(false)
+  resolvedAt    DateTime?
+  resolvedById  String?
+  resolvedBy    User?     @relation("CommentResolver", fields: [resolvedById], references: [id])
+
+  // Origen — útil para auditoría (review-link, app-interna, etc.)
+  reviewLinkId  String?
+  reviewLink    ReviewLink? @relation(fields: [reviewLinkId], references: [id], onDelete: SetNull)
+
   createdAt     DateTime @default(now())
 
   @@index([versionId, createdAt])
+  @@index([parentId])
+  @@index([resolved])
+}
+
+// ─── Review Links — links públicos compartibles para revisar entregables ──
+
+model ReviewLink {
+  id                   String   @id @default(cuid())
+  slug                 String   @unique          // token unguessable, usado en /review/[slug]
+  deliverableVersionId String
+  version              DeliverableVersion @relation(fields: [deliverableVersionId], references: [id], onDelete: Cascade)
+
+  title                String?                   // título opcional para el cliente
+  message              String?  @db.Text         // mensaje de bienvenida del productor
+
+  allowGuests          Boolean  @default(true)
+  allowDrawings        Boolean  @default(true)
+  allowDownload        Boolean  @default(false)
+  requireGuestEmail    Boolean  @default(true)
+
+  expiresAt            DateTime?
+  revokedAt            DateTime?
+
+  createdById          String
+  createdBy            User     @relation("ReviewLinkCreator", fields: [createdById], references: [id])
+  createdAt            DateTime @default(now())
+
+  comments             Comment[]
+  visits               ReviewVisit[]
+
+  @@index([slug])
+  @@index([deliverableVersionId])
+}
+
+model ReviewVisit {
+  id           String   @id @default(cuid())
+  reviewLinkId String
+  reviewLink   ReviewLink @relation(fields: [reviewLinkId], references: [id], onDelete: Cascade)
+  guestName    String?
+  guestEmail   String?
+  userId       String?  // si entró logueado
+  userAgent    String?
+  visitedAt    DateTime @default(now())
+
+  @@index([reviewLinkId, visitedAt])
 }
 
 // ─── Audit / Activity ────────────────────────────────────────────

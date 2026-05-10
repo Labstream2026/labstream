@@ -30,6 +30,8 @@ import {
 } from "@/lib/google-drive";
 import { DriveFolderViewer } from "@/components/app/DriveFolderViewer";
 import { EmbedKind } from "@prisma/client";
+import { ReviewLinksPanel, type ReviewLinkRow } from "@/components/review/ReviewLinksPanel";
+import { generateReviewSlug } from "@/lib/review";
 
 async function submitVersion(formData: FormData) {
   "use server";
@@ -372,6 +374,85 @@ async function postComment(formData: FormData) {
   revalidatePath(`/app/deliverables/${version.deliverableId}`);
 }
 
+async function createReviewLink(formData: FormData) {
+  "use server";
+  const me = await requireAppUser();
+  const versionId = String(formData.get("versionId") ?? "");
+  const title = String(formData.get("title") ?? "").trim() || null;
+  const message = String(formData.get("message") ?? "").trim() || null;
+  const expiry = String(formData.get("expiry") ?? "never");
+  const allowGuests = formData.get("allowGuests") === "on";
+  const allowDrawings = formData.get("allowDrawings") === "on";
+  const requireGuestEmail = formData.get("requireGuestEmail") === "on";
+
+  const version = await prisma.deliverableVersion.findUnique({
+    where: { id: versionId },
+    include: { deliverable: true },
+  });
+  if (!version) return;
+  const canManage = await canApproveInternal(me.id, me.role, version.deliverable.projectId);
+  if (!canManage) redirect(`/app/deliverables/${version.deliverableId}?denied=1`);
+
+  let expiresAt: Date | null = null;
+  const days =
+    expiry === "7d" ? 7 : expiry === "30d" ? 30 : expiry === "90d" ? 90 : null;
+  if (days) {
+    expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  }
+
+  await prisma.reviewLink.create({
+    data: {
+      slug: generateReviewSlug(),
+      deliverableVersionId: versionId,
+      title,
+      message,
+      allowGuests,
+      allowDrawings,
+      requireGuestEmail,
+      expiresAt,
+      createdById: me.id,
+    },
+  });
+
+  await prisma.activityLog
+    .create({
+      data: {
+        projectId: version.deliverable.projectId,
+        actorId: me.id,
+        type: "REVIEW_LINK_CREATED",
+        summary: `Link de revisión creado para "${version.deliverable.title}"`,
+      },
+    })
+    .catch(() => {});
+
+  revalidatePath(`/app/deliverables/${version.deliverableId}`);
+}
+
+async function revokeReviewLink(formData: FormData) {
+  "use server";
+  const me = await requireAppUser();
+  const linkId = String(formData.get("linkId") ?? "");
+
+  const link = await prisma.reviewLink.findUnique({
+    where: { id: linkId },
+    include: { version: { include: { deliverable: true } } },
+  });
+  if (!link) return;
+  const canManage = await canApproveInternal(
+    me.id,
+    me.role,
+    link.version.deliverable.projectId,
+  );
+  if (!canManage) redirect(`/app/deliverables/${link.version.deliverableId}?denied=1`);
+
+  await prisma.reviewLink.update({
+    where: { id: linkId },
+    data: { revokedAt: new Date() },
+  });
+
+  revalidatePath(`/app/deliverables/${link.version.deliverableId}`);
+}
+
 export default async function DeliverableReviewPage(props: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ v?: string; denied?: string }>;
@@ -395,6 +476,10 @@ export default async function DeliverableReviewPage(props: {
           approvals: {
             include: { decidedBy: { select: { name: true, email: true } } },
             orderBy: { decidedAt: "desc" },
+          },
+          reviewLinks: {
+            orderBy: { createdAt: "desc" },
+            include: { _count: { select: { visits: true, comments: true } } },
           },
         },
       },
@@ -558,7 +643,14 @@ export default async function DeliverableReviewPage(props: {
                           className="rounded-xl border border-white/5 px-4 py-3"
                         >
                           <div className="text-[12px] font-medium text-white">
-                            {c.author.name ?? c.author.email}{" "}
+                            {c.author
+                              ? c.author.name ?? c.author.email
+                              : `${c.guestName ?? "Invitado"}`}
+                            {!c.author && (
+                              <span className="ml-1 text-[10px] font-normal text-orange/85">
+                                invitado
+                              </span>
+                            )}
                             <span className="ml-1 text-[11px] font-normal text-white/40">
                               ·{" "}
                               {c.createdAt.toLocaleString("es-CO", {
@@ -625,7 +717,7 @@ export default async function DeliverableReviewPage(props: {
                             </div>
                             {a.comment && (
                               <div className="text-[12px] text-white/65">
-                                "{a.comment}"
+                                &ldquo;{a.comment}&rdquo;
                               </div>
                             )}
                           </div>
@@ -652,6 +744,32 @@ export default async function DeliverableReviewPage(props: {
           </section>
 
           <aside className="flex flex-col gap-4">
+            {canManage && selectedVersion && (
+              <ReviewLinksPanel
+                versionId={selectedVersion.id}
+                versionNumber={selectedVersion.versionNumber}
+                initialLinks={selectedVersion.reviewLinks.map(
+                  (l): ReviewLinkRow => ({
+                    id: l.id,
+                    slug: l.slug,
+                    title: l.title,
+                    message: l.message,
+                    allowGuests: l.allowGuests,
+                    allowDrawings: l.allowDrawings,
+                    allowDownload: l.allowDownload,
+                    requireGuestEmail: l.requireGuestEmail,
+                    expiresAt: l.expiresAt?.toISOString() ?? null,
+                    revokedAt: l.revokedAt?.toISOString() ?? null,
+                    createdAt: l.createdAt.toISOString(),
+                    visitsCount: l._count.visits,
+                    commentsCount: l._count.comments,
+                  }),
+                )}
+                onCreate={createReviewLink}
+                onRevoke={revokeReviewLink}
+              />
+            )}
+
             {canManage && selectedVersion && selectedVersion.driveFolderId && (
               <form
                 action={checkAndNotify}
