@@ -1,12 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AnnotationCanvas,
   paintAnnotationsToCanvas,
   type Tool,
 } from "./AnnotationCanvas";
+import { GuestWelcome } from "./GuestWelcome";
+import { CreateAccountPrompt } from "./CreateAccountPrompt";
 import type { Annotation } from "@/lib/review";
+
+const GUEST_COOKIE = "lab_guest";
+const SIGNUP_DISMISSED_COOKIE = "lab_guest_signup_dismissed";
+
+function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === "undefined") return;
+  const exp = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${exp}; path=/; SameSite=Lax`;
+}
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const m = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 export type ReviewComment = {
   id: string;
@@ -74,17 +90,33 @@ export function ReviewPlayer(props: Props) {
   const [guestEmail, setGuestEmail] = useState(props.guestEmail ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Welcome gate: si es invitado y no tenemos su nombre, lo bloqueamos al inicio
+  const [welcomeDone, setWelcomeDone] = useState(
+    props.isLoggedIn || (props.guestName != null && props.guestName.length > 0),
+  );
+  // Banner de "crear cuenta" — se muestra una vez que el invitado publica
+  // su primer comentario, y solo si no lo descartó antes.
+  const [signupVisible, setSignupVisible] = useState(false);
+  const [signupDismissedLocal, setSignupDismissedLocal] = useState(false);
+  // Lee la cookie una vez al montar; useSyncExternalStore evita setState-in-effect.
+  const dismissedFromCookie = useSyncExternalStore(
+    () => () => {},
+    () => readCookie(SIGNUP_DISMISSED_COOKIE) === "1",
+    () => false,
+  );
+  const signupDismissed = signupDismissedLocal || dismissedFromCookie;
 
-  // Guest persistence
+  // Guest persistence — cookie GLOBAL (no por slug). Se reconoce en cualquier
+  // /review/[slug] futuro automáticamente.
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (!props.isLoggedIn && (guestName || guestEmail)) {
-      // 30 días
-      const exp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-      const v = encodeURIComponent(JSON.stringify({ name: guestName, email: guestEmail }));
-      document.cookie = `review_guest_${props.slug}=${v}; expires=${exp}; path=/; SameSite=Lax`;
+    if (props.isLoggedIn) return;
+    if (guestName.trim() || guestEmail.trim()) {
+      setCookie(
+        GUEST_COOKIE,
+        JSON.stringify({ name: guestName.trim(), email: guestEmail.trim() }),
+      );
     }
-  }, [guestName, guestEmail, props.isLoggedIn, props.slug]);
+  }, [guestName, guestEmail, props.isLoggedIn]);
 
   // Comments state (local, mutated on submit)
   const [comments, setComments] = useState<ReviewComment[]>(props.initialComments);
@@ -265,6 +297,11 @@ export function ReviewPlayer(props: Props) {
       setDrawingActive(false);
       setTool("select");
       setComposerOpen(false);
+      // Si es invitado y aún no había publicado nada en esta sesión, mostramos
+      // el prompt de crear cuenta (a menos que ya lo haya descartado).
+      if (!props.isLoggedIn && !signupDismissed) {
+        setSignupVisible(true);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error desconocido";
       setErrorMsg(msg);
@@ -320,6 +357,23 @@ export function ReviewPlayer(props: Props) {
     props.isLoggedIn ||
     (guestName.trim().length > 0 &&
       (!props.requireGuestEmail || /\S+@\S+\.\S+/.test(guestEmail)));
+
+  // ───── Welcome gate: invitado que aún no se identificó ─────
+  if (!welcomeDone && props.allowGuests) {
+    return (
+      <GuestWelcome
+        reviewTitle={props.title}
+        message={props.message}
+        requireEmail={props.requireGuestEmail}
+        onContinue={({ name, email }) => {
+          setGuestName(name);
+          setGuestEmail(email);
+          setCookie(GUEST_COOKIE, JSON.stringify({ name, email }));
+          setWelcomeDone(true);
+        }}
+      />
+    );
+  }
 
   // ───── UI ─────
   return (
@@ -565,7 +619,38 @@ export function ReviewPlayer(props: Props) {
           {props.message && (
             <p className="mt-1 text-[12.5px] leading-snug text-white/70">{props.message}</p>
           )}
+          {!props.isLoggedIn && guestName && (
+            <p className="mt-2 text-[11.5px] text-white/55">
+              Comentando como <span className="font-medium text-white/85">{guestName}</span>
+              {" · "}
+              <button
+                type="button"
+                onClick={() => {
+                  setGuestName("");
+                  setGuestEmail("");
+                  setCookie(GUEST_COOKIE, "", -1);
+                  setWelcomeDone(false);
+                }}
+                className="text-orange hover:underline"
+              >
+                cambiar
+              </button>
+            </p>
+          )}
         </div>
+
+        {signupVisible && !signupDismissed && !props.isLoggedIn && (
+          <CreateAccountPrompt
+            guestName={guestName}
+            guestEmail={guestEmail}
+            reviewSlug={props.slug}
+            onDismiss={() => {
+              setSignupVisible(false);
+              setSignupDismissedLocal(true);
+              setCookie(SIGNUP_DISMISSED_COOKIE, "1");
+            }}
+          />
+        )}
 
         {/* Composer fijo */}
         {composerOpen ? (
@@ -590,7 +675,9 @@ export function ReviewPlayer(props: Props) {
               </button>
             </div>
 
-            {!props.isLoggedIn && (
+            {/* Nombre/email se piden en el welcome gate. Los inputs aquí solo
+                aparecen como fallback si por algún motivo se perdieron. */}
+            {!props.isLoggedIn && (!guestName || (props.requireGuestEmail && !guestEmail)) && (
               <div className="mb-2 grid grid-cols-2 gap-2">
                 <input
                   required
@@ -791,7 +878,7 @@ function CommentCard({
 
       {replyOpen && (
         <div className="mt-2 flex flex-col gap-1.5">
-          {composeAsGuest && (
+          {composeAsGuest && (!guestName || (requireGuestEmail && !guestEmail)) && (
             <div className="grid grid-cols-2 gap-1.5">
               <input
                 placeholder="Tu nombre"

@@ -76,34 +76,33 @@ export default async function ReviewPage(props: {
 
   const session = await auth();
 
-  // Registra visita (best-effort, fire & forget)
-  void (async () => {
+  // Lee perfil global del invitado (usado tanto para visit tracking como para
+  // saltarse el welcome gate en links subsiguientes).
+  const cookieStore = await cookies();
+  const headersList = await headers();
+  const guestCookie = cookieStore.get("lab_guest");
+  let initialGuestName: string | null = null;
+  let initialGuestEmail: string | null = null;
+  if (guestCookie) {
     try {
-      const cookieStore = await cookies();
-      const headersList = await headers();
-      const guestCookie = cookieStore.get(`review_guest_${slug}`);
-      let guestName: string | null = null;
-      let guestEmail: string | null = null;
-      if (guestCookie) {
-        try {
-          const v = JSON.parse(decodeURIComponent(guestCookie.value));
-          guestName = v.name ?? null;
-          guestEmail = v.email ?? null;
-        } catch {}
-      }
-      await prisma.reviewVisit.create({
-        data: {
-          reviewLinkId: link.id,
-          guestName,
-          guestEmail,
-          userId: session?.user?.id ?? null,
-          userAgent: headersList.get("user-agent")?.slice(0, 200) ?? null,
-        },
-      });
-    } catch (e) {
-      console.warn("[review] visit tracking failed", e);
-    }
-  })();
+      const v = JSON.parse(decodeURIComponent(guestCookie.value));
+      initialGuestName = typeof v.name === "string" ? v.name : null;
+      initialGuestEmail = typeof v.email === "string" ? v.email : null;
+    } catch {}
+  }
+
+  // Registra visita (best-effort, fire & forget)
+  void prisma.reviewVisit
+    .create({
+      data: {
+        reviewLinkId: link.id,
+        guestName: initialGuestName,
+        guestEmail: initialGuestEmail,
+        userId: session?.user?.id ?? null,
+        userAgent: headersList.get("user-agent")?.slice(0, 200) ?? null,
+      },
+    })
+    .catch((e) => console.warn("[review] visit tracking failed", e));
 
   // Player mode: si Drive y hay credenciales para proxy, usar streaming directo
   const drive = hasDriveCredentials();
@@ -122,19 +121,6 @@ export default async function ReviewPage(props: {
       : playerMode.kind === "image"
       ? { kind: "image", src: playerMode.src }
       : { kind: "unsupported", url: playerMode.url ?? "" };
-
-  // Cookie con datos del invitado (autocompletar)
-  const cookieStore = await cookies();
-  const guestCookie = cookieStore.get(`review_guest_${slug}`);
-  let initialGuestName: string | null = null;
-  let initialGuestEmail: string | null = null;
-  if (guestCookie) {
-    try {
-      const v = JSON.parse(decodeURIComponent(guestCookie.value));
-      initialGuestName = v.name ?? null;
-      initialGuestEmail = v.email ?? null;
-    } catch {}
-  }
 
   const initialComments: ReviewComment[] = link.version.comments.map((c) => ({
     id: c.id,
