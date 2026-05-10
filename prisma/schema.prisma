@@ -300,6 +300,7 @@ model Service {
   visible     Boolean  @default(true)
   coverId     String?
   cover       Asset?   @relation("ServiceCover", fields: [coverId], references: [id])
+  draft       Json?    // borrador en vivo del CMS — overrides para preview
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -728,6 +729,7 @@ model PortfolioProject {
   featured      Boolean           @default(false)
   order         Int               @default(0)
   publishedAt   DateTime?
+  draft         Json?             // borrador en vivo del CMS — overrides para preview
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -750,6 +752,7 @@ model BlogPost {
   status        BlogPostStatus @default(DRAFT)
   readMinutes   Int?
   publishedAt   DateTime?
+  draft         Json?          // borrador en vivo del CMS — overrides para preview
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -834,6 +837,7 @@ model AboutContent {
   mission       String?
   vision        String?
   values        Json?    // [{ icon, title, desc }, ...]
+  draft         Json?    // borrador en vivo del CMS — overrides para preview
   updatedAt     DateTime @updatedAt
 }
 

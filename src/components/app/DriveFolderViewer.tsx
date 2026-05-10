@@ -134,9 +134,7 @@ export function DriveFolderViewer({ versionId, folderId }: Props) {
               📁 Carpeta de Google Drive
             </div>
             <p className="text-[11px] text-white/45">
-              Vista embebida (configura{" "}
-              <code className="text-orange/80">GOOGLE_DRIVE_API_KEY</code> para
-              activar visor avanzado con descarga selectiva)
+              Reproduce y descarga los archivos directamente desde Drive.
             </p>
           </div>
         </div>

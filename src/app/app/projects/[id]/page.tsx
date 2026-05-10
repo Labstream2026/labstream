@@ -16,10 +16,10 @@ import {
   canManageProject,
   canApproveAsClient,
   PROJECT_ROLE_LABELS,
-  STATUS_LABELS,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
 import { detectEmbedKind } from "@/lib/google-drive";
+import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
 
 async function updateTaskStatus(formData: FormData) {
   "use server";
@@ -299,7 +299,7 @@ export default async function ProjectDetailPage(props: {
               </button>
             </form>
           ) : (
-            <StatusPill status={project.status} />
+            <UIStatusPill status={project.status} size="lg" />
           )}
         </div>
       </header>
@@ -311,9 +311,37 @@ export default async function ProjectDetailPage(props: {
             Fases y tareas
           </h2>
           {project.phases.length === 0 ? (
-            <div className="lg rounded-2xl p-6 text-center text-[13px] text-white/55">
-              Este proyecto aún no tiene fases. Crea desde una plantilla o
-              agrega manual.
+            <div
+              className="rounded-2xl p-8 text-center"
+              style={{
+                border: "1px dashed rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.02)",
+              }}
+            >
+              <div className="text-[28px]" aria-hidden>📋</div>
+              <h3 className="mt-2 font-heading text-white" style={{ fontSize: 22, letterSpacing: "-0.3px" }}>
+                Empieza estructurando el proyecto
+              </h3>
+              <p className="mx-auto mt-1.5 max-w-sm text-[13px] leading-snug text-white/55">
+                Define las fases (brief, pre, producción, post, entrega) y las tareas que las componen.
+                Puedes hacerlo desde una plantilla o paso a paso.
+              </p>
+              {isManager && (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Link
+                    href="/app/templates"
+                    className="rounded-full bg-orange px-5 py-2 text-[13px] font-semibold text-white hover:bg-orange/85"
+                  >
+                    Ver plantillas
+                  </Link>
+                  <a
+                    href="#agregar-entregable"
+                    className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-[13px] font-medium text-white hover:bg-white/10"
+                  >
+                    Saltar y crear entregable
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
             project.phases.map((ph) => (
@@ -332,8 +360,18 @@ export default async function ProjectDetailPage(props: {
           </h2>
           <div className="flex flex-col gap-3">
             {project.deliverables.length === 0 ? (
-              <div className="lg rounded-2xl p-6 text-center text-[13px] text-white/55">
-                No hay entregables todavía.
+              <div
+                className="rounded-2xl p-6 text-center"
+                style={{
+                  border: "1px dashed rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div className="text-[24px]" aria-hidden>🎬</div>
+                <p className="mt-1.5 text-[13px] text-white/55">
+                  Sin entregables aún. Crea uno con el formulario de abajo
+                  para que el cliente empiece a revisar material.
+                </p>
               </div>
             ) : (
               project.deliverables.map((d) => (
@@ -352,7 +390,7 @@ export default async function ProjectDetailPage(props: {
                       {d.title}
                     </div>
                   </div>
-                  <DeliverableStatusPill status={d.status} />
+                  <UIStatusPill status={d.status} />
                 </Link>
               ))
             )}
@@ -360,8 +398,9 @@ export default async function ProjectDetailPage(props: {
 
           {isManager && (
             <form
+              id="agregar-entregable"
               action={createDeliverable}
-              className="lg flex flex-col gap-3 rounded-2xl p-5"
+              className="lg scroll-mt-32 flex flex-col gap-3 rounded-2xl p-5"
             >
               <h3 className="text-[14px] font-semibold text-white">
                 Nuevo entregable
@@ -553,7 +592,7 @@ function PhaseBlock({
     <div className="lg rounded-2xl p-5">
       <div className="mb-3 flex items-center gap-3">
         <h3 className="text-[15px] font-semibold text-white">{phase.name}</h3>
-        <PhaseStatusBadge status={phase.status} />
+        <UIStatusPill status={phase.status} size="sm" />
         <span className="ml-auto text-[11px] text-white/45">
           {phase.tasks.length}{" "}
           {phase.tasks.length === 1 ? "tarea" : "tareas"}
@@ -600,7 +639,7 @@ function PhaseBlock({
                   </button>
                 </form>
               ) : (
-                <TaskStatusPill status={t.status} />
+                <UIStatusPill status={t.status} size="sm" />
               )}
             </li>
           ))}
@@ -632,69 +671,3 @@ function PhaseBlock({
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  return (
-    <span className="inline-block rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/75">
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
-function PhaseStatusBadge({ status }: { status: PhaseStatus }) {
-  const map: Record<PhaseStatus, { bg: string; color: string }> = {
-    PENDING: { bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)" },
-    ACTIVE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-    COMPLETED: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    ON_HOLD: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
-  };
-  const s = map[status];
-  return (
-    <span
-      className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
-function TaskStatusPill({ status }: { status: TaskStatus }) {
-  const map: Record<TaskStatus, { bg: string; color: string }> = {
-    TODO: { bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)" },
-    DOING: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    REVIEW: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
-    DONE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-    BLOCKED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
-  };
-  const s = map[status];
-  return (
-    <span
-      className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
-function DeliverableStatusPill({ status }: { status: DeliverableStatus }) {
-  const map: Record<DeliverableStatus, { bg: string; color: string }> = {
-    DRAFT: { bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)" },
-    INTERNAL_REVIEW: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    CLIENT_REVIEW: {
-      bg: "rgba(232,100,12,0.15)",
-      color: "var(--orange)",
-    },
-    CHANGES_REQUESTED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
-    APPROVED: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-  };
-  const s = map[status];
-  return (
-    <span
-      className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}

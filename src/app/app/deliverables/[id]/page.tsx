@@ -13,7 +13,6 @@ import {
   canApproveAsClient,
   canApproveInternal,
   DELIVERABLE_KIND_LABELS,
-  STATUS_LABELS,
 } from "@/lib/app-guards";
 import { sendEmail, escapeHtml } from "@/lib/email";
 import {
@@ -32,6 +31,7 @@ import { DriveFolderViewer } from "@/components/app/DriveFolderViewer";
 import { EmbedKind } from "@prisma/client";
 import { ReviewLinksPanel, type ReviewLinkRow } from "@/components/review/ReviewLinksPanel";
 import { generateReviewSlug } from "@/lib/review";
+import { StatusPill } from "@/components/app/ui/StatusPill";
 
 async function submitVersion(formData: FormData) {
   "use server";
@@ -528,8 +528,38 @@ export default async function DeliverableReviewPage(props: {
             </p>
           )}
         </div>
-        <DeliverableStatusPill status={deliverable.status} />
+        <StatusPill status={deliverable.status} size="lg" />
       </header>
+
+      {/* Banner sticky de "Tu turno" para CLIENTE cuando aplica */}
+      {canClientApprove &&
+        deliverable.status === DeliverableStatus.CLIENT_REVIEW &&
+        selectedVersion && (
+          <div
+            className="sticky top-0 z-20 -mx-5 mb-5 border-b px-5 py-3 backdrop-blur md:-mx-10 md:px-10"
+            style={{
+              borderColor: "rgba(232,100,12,0.4)",
+              background: "rgba(20, 12, 4, 0.85)",
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-orange">
+                  // Tu turno
+                </div>
+                <div className="text-[14px] font-semibold text-white">
+                  Revisa este material y aprueba o pide cambios
+                </div>
+              </div>
+              <a
+                href="#aprobacion"
+                className="rounded-full bg-orange px-5 py-2 text-[13px] font-semibold text-white hover:bg-orange/85"
+              >
+                Ir a aprobar →
+              </a>
+            </div>
+          </div>
+        )}
 
       {sp.denied && (
         <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[13px] text-red-300">
@@ -616,14 +646,16 @@ export default async function DeliverableReviewPage(props: {
                 {/* Acciones de aprobación */}
                 {selectedVersion.id === versions[0].id &&
                   deliverable.status !== DeliverableStatus.APPROVED && (
-                    <ApprovalActions
-                      deliverable={deliverable}
-                      version={selectedVersion}
-                      canManage={canManage}
-                      canClientApprove={canClientApprove}
-                      onInternal={approveInternal}
-                      onClient={approveAsClient}
-                    />
+                    <div id="aprobacion" className="scroll-mt-32">
+                      <ApprovalActions
+                        deliverable={deliverable}
+                        version={selectedVersion}
+                        canManage={canManage}
+                        canClientApprove={canClientApprove}
+                        onInternal={approveInternal}
+                        onClient={approveAsClient}
+                      />
+                    </div>
                   )}
 
                 {/* Comentarios / notas */}
@@ -980,25 +1012,6 @@ function ApprovalActions({
   }
 
   return null;
-}
-
-function DeliverableStatusPill({ status }: { status: DeliverableStatus }) {
-  const map: Record<DeliverableStatus, { bg: string; color: string }> = {
-    DRAFT: { bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.55)" },
-    INTERNAL_REVIEW: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    CLIENT_REVIEW: { bg: "rgba(232,100,12,0.15)", color: "var(--orange)" },
-    CHANGES_REQUESTED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
-    APPROVED: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-  };
-  const s = map[status];
-  return (
-    <span
-      className="whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
 }
 
 function VersionEmbed({

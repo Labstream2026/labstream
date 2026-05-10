@@ -12,6 +12,7 @@ import {
   STATUS_LABELS,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
+import { thumbnailFromVersion } from "@/lib/thumbnails";
 
 export default async function AppDashboard() {
   const me = await requireAppUser();
@@ -95,25 +96,49 @@ async function ClientDashboard({
             de revisar
           </h2>
           <div className="grid gap-3 md:grid-cols-2">
-            {pendingApprovals.map((d) => (
-              <Link
-                key={d.id}
-                href={`/app/deliverables/${d.id}`}
-                className="lg-strong flex items-center justify-between gap-3 rounded-xl p-4 transition-colors hover:bg-white/[0.09]"
-              >
-                <div className="min-w-0">
-                  <div className="text-[11px] font-medium uppercase tracking-wider text-white/45">
-                    {d.project.name}
+            {pendingApprovals.map((d) => {
+              const thumb = thumbnailFromVersion(d.currentVersion);
+              return (
+                <Link
+                  key={d.id}
+                  href={`/app/deliverables/${d.id}`}
+                  className="lg-strong group flex items-center gap-3 overflow-hidden rounded-xl p-2 pr-3 transition-colors hover:bg-white/[0.09]"
+                >
+                  {/* Thumbnail */}
+                  <div
+                    className="relative aspect-video h-16 shrink-0 overflow-hidden rounded-lg bg-black/40"
+                    style={{ width: 96 }}
+                  >
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={thumb}
+                        alt=""
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-orange/60" aria-hidden>
+                        ▶
+                      </div>
+                    )}
                   </div>
-                  <div className="truncate text-[15px] font-semibold text-white">
-                    {DELIVERABLE_KIND_LABELS[d.kind] ?? d.kind} · {d.title}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10.5px] font-medium uppercase tracking-wider text-white/45">
+                      {d.project.name}
+                    </div>
+                    <div className="truncate text-[14.5px] font-semibold text-white">
+                      {d.title}
+                    </div>
+                    <div className="text-[11px] text-white/55">
+                      {DELIVERABLE_KIND_LABELS[d.kind] ?? d.kind}
+                    </div>
                   </div>
-                </div>
-                <span className="rounded-full bg-orange px-3 py-1.5 text-[12px] font-semibold text-white">
-                  Revisar
-                </span>
-              </Link>
-            ))}
+                  <span className="shrink-0 rounded-full bg-orange px-3 py-1.5 text-[12px] font-semibold text-white">
+                    Revisar
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
