@@ -5,7 +5,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function saveMember(formData: FormData) {
   "use server";
@@ -163,6 +163,7 @@ export default async function TeamPage() {
                 className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row"
               >
             <input type="hidden" name="id" value={m.id} />
+            <FormShortcuts />
 
             <div className="flex flex-1 flex-col gap-2.5">
               <ImageField
@@ -256,6 +257,7 @@ export default async function TeamPage() {
           action={createMember}
           className="lg flex flex-col gap-3 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field name="name" label="Nombre" required />
             <Field name="role" label="Rol" placeholder="Director, Productor…" required />

@@ -5,7 +5,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function saveLogo(formData: FormData) {
   "use server";
@@ -150,6 +150,7 @@ export default async function LogosPage() {
                 className="lg flex flex-col gap-3 rounded-2xl p-5 md:flex-row md:items-center"
               >
             <input type="hidden" name="id" value={l.id} />
+            <FormShortcuts />
 
             <ImageField
               name="logoUrl"
@@ -220,6 +221,7 @@ export default async function LogosPage() {
           action={createLogo}
           className="lg flex flex-col gap-4 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <ImageField
             name="logoUrl"
             label="Logo (SVG / PNG transparente)"

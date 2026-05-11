@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { LeadStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
-import { EditorToolbar, Select } from "@/components/cms/form";
+import { EditorToolbar, Select, FormShortcuts } from "@/components/cms/form";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Nuevo",
@@ -130,6 +130,7 @@ export default async function LeadDetailPage(props: {
 
       <form action={saveLead} className="lg flex flex-col gap-5 rounded-2xl p-6">
         <input type="hidden" name="id" value={lead.id} />
+        <FormShortcuts />
 
         <label className="flex flex-col gap-1.5">
           <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">

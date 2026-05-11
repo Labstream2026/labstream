@@ -6,7 +6,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { Prisma } from "@prisma/client";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Field, Input, Textarea, PageHeader } from "@/components/cms/form";
+import { Field, Input, Textarea, PageHeader, FormShortcuts } from "@/components/cms/form";
 
 type ValueItem = { icon: string; title: string; desc: string };
 
@@ -106,6 +106,7 @@ export default async function AboutPage() {
         previewPath="/nosotros"
       >
         <form action={saveAbout} className="lg flex flex-col gap-5 rounded-2xl p-6 md:p-8">
+        <FormShortcuts />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field
             label="Eyebrow"

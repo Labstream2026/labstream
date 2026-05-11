@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function createPost(formData: FormData) {
   "use server";
@@ -303,6 +303,7 @@ export default async function BlogListPage(props: {
           action={createPost}
           className="lg flex flex-wrap items-end gap-4 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <label className="flex flex-1 min-w-[260px] flex-col gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
               Título

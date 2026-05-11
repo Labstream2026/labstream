@@ -20,6 +20,7 @@ import {
 } from "@/lib/blocks";
 import { BlockForm } from "@/components/cms/BlockForms";
 import { ConfirmForm } from "@/components/ConfirmForm";
+import { FormShortcuts } from "@/components/cms/form";
 
 async function savePageMeta(formData: FormData) {
   "use server";
@@ -360,6 +361,7 @@ export default async function EditPage(props: {
             className="lg flex flex-col gap-4 rounded-2xl p-6"
           >
             <input type="hidden" name="id" value={page.id} />
+            <FormShortcuts />
             <h2 className="mb-1 text-[14px] font-semibold text-white">
               Información de la página
             </h2>

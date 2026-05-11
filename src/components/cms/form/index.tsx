@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+export { FormShortcuts } from "./FormShortcuts";
+
 // ─── Page header ────────────────────────────────────────────────────
 
 export function PageHeader({
@@ -213,7 +215,11 @@ export function FormActions({
           {cancelLabel}
         </Link>
       )}
-      <button type="submit" className="btn-primary">
+      <button
+        type="submit"
+        className="btn-primary"
+        title="Atajo: ⌘+S (Mac) o Ctrl+S"
+      >
         {submitLabel}
       </button>
     </div>

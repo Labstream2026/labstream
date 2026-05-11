@@ -5,7 +5,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
@@ -162,6 +162,7 @@ export default async function TestimonialsPage() {
                 className="lg flex flex-col gap-3 rounded-2xl p-5"
               >
             <input type="hidden" name="id" value={t.id} />
+            <FormShortcuts />
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <Field
@@ -274,6 +275,7 @@ export default async function TestimonialsPage() {
           action={createTestimonial}
           className="lg grid grid-cols-1 gap-3 rounded-2xl p-6 md:grid-cols-3"
         >
+          <FormShortcuts />
           <Field name="authorName" label="Nombre" required />
           <Field name="authorRole" label="Cargo" placeholder="Brand Manager" />
           <Field name="authorCompany" label="Empresa" placeholder="PepsiCo" />

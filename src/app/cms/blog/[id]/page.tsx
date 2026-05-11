@@ -8,7 +8,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar } from "@/components/cms/form";
+import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts } from "@/components/cms/form";
 
 async function savePost(formData: FormData) {
   "use server";
@@ -125,6 +125,7 @@ export default async function BlogDetailPage(props: {
           className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
         >
           <input type="hidden" name="id" value={post.id} />
+          <FormShortcuts />
 
         <Section title="Básicos">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

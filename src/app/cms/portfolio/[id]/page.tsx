@@ -8,7 +8,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar } from "@/components/cms/form";
+import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts } from "@/components/cms/form";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -226,6 +226,7 @@ export default async function PortfolioDetailPage(props: {
           className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
         >
           <input type="hidden" name="id" value={project.id} />
+          <FormShortcuts />
 
         {/* Sección 1: Básicos */}
         <Section title="Básicos">

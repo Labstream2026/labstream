@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError } from "@/lib/cms-flash";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function saveService(formData: FormData) {
   "use server";
@@ -94,6 +94,7 @@ export default async function ServicesPage() {
             className="lg grid grid-cols-1 gap-4 rounded-2xl p-5 md:grid-cols-[1fr_2fr_auto]"
           >
             <input type="hidden" name="id" value={s.id} />
+            <FormShortcuts />
             <input
               name="title"
               defaultValue={s.title}
@@ -151,6 +152,7 @@ export default async function ServicesPage() {
           action={createService}
           className="lg flex flex-wrap items-end gap-4 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
               Título

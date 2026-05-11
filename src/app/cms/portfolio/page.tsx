@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioCategory } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -256,6 +256,7 @@ export default async function PortfolioListPage(props: {
           action={createProject}
           className="lg flex flex-wrap items-end gap-4 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
               Título

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { SortableList } from "@/components/cms/SortableList";
-import { PageHeader } from "@/components/cms/form";
+import { PageHeader, FormShortcuts } from "@/components/cms/form";
 
 async function saveFaq(formData: FormData) {
   "use server";
@@ -143,6 +143,7 @@ export default async function FaqsPage() {
                 className="lg flex flex-col gap-3 rounded-2xl p-5"
               >
             <input type="hidden" name="id" value={f.id} />
+            <FormShortcuts />
 
             <label className="flex flex-col gap-1.5">
               <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
@@ -212,6 +213,7 @@ export default async function FaqsPage() {
           action={createFaq}
           className="lg flex flex-col gap-3 rounded-2xl p-6"
         >
+          <FormShortcuts />
           <label className="flex flex-col gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
               Pregunta

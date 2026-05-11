@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AssetPicker } from "@/components/cms/AssetPicker";
+import { FormShortcuts } from "@/components/cms/form";
 
 type Initial = {
   fontHeading: string;
@@ -41,6 +42,7 @@ export function AppearanceForm({
         action={action}
         className="lg flex flex-col gap-5 rounded-2xl p-6"
       >
+        <FormShortcuts />
         <Section title="Tipografía">
           <FontSelect
             label="Fuente de titulares"

@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/cms-guard";
+import { FormShortcuts } from "@/components/cms/form";
 
 async function saveSettings(formData: FormData) {
   "use server";
@@ -53,6 +54,7 @@ export default async function SettingsPage() {
         action={saveSettings}
         className="lg grid grid-cols-1 gap-4 rounded-2xl p-6 md:grid-cols-2"
       >
+        <FormShortcuts />
         <Field
           name="siteName"
           label="Nombre del sitio"
