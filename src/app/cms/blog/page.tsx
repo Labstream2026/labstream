@@ -6,6 +6,7 @@ import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function createPost(formData: FormData) {
   "use server";
@@ -282,16 +283,16 @@ export default async function BlogListPage(props: {
               >
                 Editar
               </Link>
-              <form action={deletePost}>
-                <input type="hidden" name="id" value={p.id} />
-                <button
-                  type="submit"
-                  className="rounded-md border border-red-500/20 px-2.5 py-2 text-[12px] text-red-300 hover:bg-red-500/10"
-                  title="Eliminar"
-                >
-                  ✕
-                </button>
-              </form>
+              <ConfirmButton
+                action={deletePost}
+                hiddenFields={{ id: p.id }}
+                title="Eliminar post"
+                description={<>¿Quieres eliminar <strong>{p.title}</strong>? Esta acción no se puede deshacer.</>}
+                confirmLabel="Eliminar"
+                ariaLabel="Eliminar"
+              >
+                ✕
+              </ConfirmButton>
             </div>
           </div>
         ))}

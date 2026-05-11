@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { BlockType } from "@/lib/blocks";
+import { BLOCK_LABELS, type BlockType } from "@/lib/blocks";
 import { AssetPicker } from "@/components/cms/AssetPicker";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 type BaseProps = {
   blockId: string;
@@ -46,12 +47,14 @@ export function BlockForm(props: Props) {
 
 function FormShell({
   blockId,
+  type,
   saveAction,
   deleteAction,
   moveUpAction,
   moveDownAction,
   children,
-}: BaseProps & { children: React.ReactNode }) {
+}: BaseProps & { type: BlockType; children: React.ReactNode }) {
+  const blockLabel = BLOCK_LABELS[type] ?? type;
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
@@ -75,21 +78,19 @@ function FormShell({
             ↓
           </button>
         </form>
-        <form
-          action={deleteAction}
-          className="contents"
-          onSubmit={(e) => {
-            if (!confirm("¿Eliminar este bloque?")) e.preventDefault();
-          }}
-        >
-          <input type="hidden" name="blockId" value={blockId} />
-          <button
-            type="submit"
-            className="ml-auto rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/20"
+        <div className="ml-auto">
+          <ConfirmButton
+            action={deleteAction}
+            hiddenFields={{ blockId }}
+            title="Eliminar bloque"
+            description={<>¿Quieres eliminar el bloque <strong>{blockLabel}</strong>? Esta acción no se puede deshacer.</>}
+            confirmLabel="Eliminar bloque"
+            ariaLabel="Eliminar bloque"
+            className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/20"
           >
             Eliminar
-          </button>
-        </form>
+          </ConfirmButton>
+        </div>
       </div>
 
       <form action={saveAction} className="grid grid-cols-1 gap-4 md:grid-cols-2">

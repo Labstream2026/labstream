@@ -6,6 +6,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function saveLogo(formData: FormData) {
   "use server";
@@ -199,7 +200,17 @@ export default async function LogosPage() {
                 />
                 Dest
               </label>
-              <DeleteButton action={deleteLogo} id={l.id} label={`Eliminar logo ${l.name}`} />
+              <ConfirmButton
+                action={deleteLogo}
+                hiddenFields={{ id: l.id }}
+                title="Eliminar logo"
+                description={<>¿Quieres eliminar el logo de <strong>{l.name}</strong>? Esta acción no se puede deshacer.</>}
+                confirmLabel="Eliminar"
+                ariaLabel={`Eliminar logo ${l.name}`}
+                className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
+              >
+                Eliminar
+              </ConfirmButton>
               <button
                 type="submit"
                 className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-medium text-white hover:bg-white/10"
@@ -255,29 +266,6 @@ export default async function LogosPage() {
         </form>
       </div>
     </div>
-  );
-}
-
-function DeleteButton({
-  action,
-  id,
-  label,
-}: {
-  action: (formData: FormData) => void;
-  id: string;
-  label: string;
-}) {
-  return (
-    <form action={action} className="inline">
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        className="rounded-md border border-red-500/20 px-2.5 py-2 text-[11px] text-red-300 hover:bg-red-500/10"
-        title={label}
-      >
-        Eliminar
-      </button>
-    </form>
   );
 }
 

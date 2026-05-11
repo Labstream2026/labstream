@@ -19,7 +19,7 @@ import {
   type BlockType,
 } from "@/lib/blocks";
 import { BlockForm } from "@/components/cms/BlockForms";
-import { ConfirmForm } from "@/components/ConfirmForm";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 import { FormShortcuts } from "@/components/cms/form";
 
 async function savePageMeta(formData: FormData) {
@@ -405,25 +405,25 @@ export default async function EditPage(props: {
           </form>
 
           {isSuper && !page.isHome && (
-            <ConfirmForm
-              action={deletePage}
-              className="mt-6 lg rounded-2xl p-6"
-              message={`¿Eliminar la página "${page.title}"? Esta acción no se puede deshacer.`}
-            >
-              <input type="hidden" name="id" value={page.id} />
+            <div className="mt-6 lg rounded-2xl p-6">
               <h2 className="mb-2 text-[14px] font-semibold text-red-300">
                 Zona peligrosa
               </h2>
               <p className="mb-3 text-[12px] text-white/55">
                 Eliminar esta página borrará también todos sus bloques.
               </p>
-              <button
-                type="submit"
+              <ConfirmButton
+                action={deletePage}
+                hiddenFields={{ id: page.id }}
+                title="Eliminar página"
+                description={<>¿Quieres eliminar la página <strong>{page.title}</strong>? Esta acción también borrará todos sus bloques y no se puede deshacer.</>}
+                confirmLabel="Eliminar página"
+                ariaLabel="Eliminar página"
                 className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] font-medium text-red-300 hover:bg-red-500/20"
               >
                 Eliminar página
-              </button>
-            </ConfirmForm>
+              </ConfirmButton>
+            </div>
           )}
         </div>
 

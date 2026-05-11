@@ -6,6 +6,7 @@ import { LeadStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { EditorToolbar, Select, FormShortcuts } from "@/components/cms/form";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Nuevo",
@@ -166,7 +167,17 @@ export default async function LeadDetailPage(props: {
         </label>
 
         <div className="flex justify-end gap-3">
-          <DeleteForm id={lead.id} />
+          <ConfirmButton
+            action={deleteLead}
+            hiddenFields={{ id: lead.id }}
+            title="Eliminar lead"
+            description={<>¿Quieres eliminar el lead de <strong>{lead.name}</strong>? Esta acción no se puede deshacer.</>}
+            confirmLabel="Eliminar lead"
+            ariaLabel="Eliminar lead"
+            className="rounded-md border border-red-500/20 px-4 py-2.5 text-[13px] text-red-300 hover:bg-red-500/10"
+          >
+            Eliminar lead
+          </ConfirmButton>
           <button type="submit" className="btn-primary">
             Guardar
           </button>
@@ -174,19 +185,5 @@ export default async function LeadDetailPage(props: {
       </form>
     </div>
   );
-
-  function DeleteForm({ id }: { id: string }) {
-    return (
-      <form action={deleteLead} className="inline">
-        <input type="hidden" name="id" value={id} />
-        <button
-          type="submit"
-          className="rounded-md border border-red-500/20 px-4 py-2.5 text-[13px] text-red-300 hover:bg-red-500/10"
-        >
-          Eliminar lead
-        </button>
-      </form>
-    );
-  }
 }
 

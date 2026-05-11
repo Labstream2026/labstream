@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCmsUser } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { AssetSource } from "@prisma/client";
+import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function addUrlAsset(formData: FormData) {
   "use server";
@@ -185,15 +186,17 @@ export default async function AssetsPage() {
                     >
                       Abrir ↗
                     </a>
-                    <form action={deleteAsset}>
-                      <input type="hidden" name="id" value={a.id} />
-                      <button
-                        type="submit"
-                        className="text-[11px] text-white/45 hover:text-red-400"
-                      >
-                        Eliminar
-                      </button>
-                    </form>
+                    <ConfirmButton
+                      action={deleteAsset}
+                      hiddenFields={{ id: a.id }}
+                      title="Eliminar archivo"
+                      description={<>¿Quieres eliminar <strong>{a.filename ?? a.url}</strong>? Esta acción no se puede deshacer.</>}
+                      confirmLabel="Eliminar"
+                      ariaLabel="Eliminar archivo"
+                      className="text-[11px] text-white/45 hover:text-red-400"
+                    >
+                      Eliminar
+                    </ConfirmButton>
                   </div>
                 </div>
               </div>
