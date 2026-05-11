@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { auth, signOut } from "@/auth";
-import { CmsRole } from "@prisma/client";
+import { CmsRole, UserKind } from "@prisma/client";
 import { CmsShell } from "@/components/cms/CmsShell";
+import { CmsToaster } from "@/components/cms/Toaster";
 
 export default async function CmsLayout({
   children,
@@ -15,11 +16,17 @@ export default async function CmsLayout({
   const isLogin = path.includes("/cms/login");
 
   if (isLogin || !session?.user) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <CmsToaster />
+      </>
+    );
   }
 
   const user = session.user;
   const isSuper = user.role === CmsRole.SUPER_ADMIN;
+  const isMaster = user.kind === UserKind.ADMIN;
 
   async function handleSignOut() {
     "use server";
@@ -27,12 +34,16 @@ export default async function CmsLayout({
   }
 
   return (
-    <CmsShell
-      user={{ name: user.name ?? null, email: user.email, role: user.role }}
-      isSuper={isSuper}
-      signOut={handleSignOut}
-    >
-      {children}
-    </CmsShell>
+    <>
+      <CmsShell
+        user={{ name: user.name ?? null, email: user.email, role: user.role }}
+        isSuper={isSuper}
+        isMaster={isMaster}
+        signOut={handleSignOut}
+      >
+        {children}
+      </CmsShell>
+      <CmsToaster />
+    </>
   );
 }

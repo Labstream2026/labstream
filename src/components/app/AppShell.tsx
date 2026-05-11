@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { AreaSwitcher } from "@/components/AreaSwitcher";
 import type { AppRole } from "@/lib/app-guards";
 
 type Props = {
@@ -130,7 +131,14 @@ export function AppShell({ user, role, isMaster, signOut, children }: Props) {
   );
 
   return (
-    <div className="min-h-screen md:flex" style={{ background: "var(--bg)" }}>
+    <div className="flex min-h-screen flex-col" style={{ background: "var(--bg)" }}>
+      <AreaSwitcher
+        current="app"
+        isMaster={isMaster}
+        canAccessCms={isMaster}
+        canAccessApp={true}
+      />
+      <div className="flex flex-1 flex-col md:flex-row">
       <header
         className="sticky top-0 z-40 flex items-center justify-between border-b px-4 py-3 md:hidden"
         style={{
@@ -205,6 +213,7 @@ export function AppShell({ user, role, isMaster, signOut, children }: Props) {
       </aside>
 
       <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

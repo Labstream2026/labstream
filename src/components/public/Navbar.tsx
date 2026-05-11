@@ -160,9 +160,9 @@ export function Navbar() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <Link
-              href="/cms/login"
-              aria-label="Acceso clientes"
-              title="Si ya eres cliente, accede a tu panel"
+              href="/cms/login?next=/api/auth/post-login"
+              aria-label="Portal clientes"
+              title="Acceso para clientes y equipo"
               className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-orange/40 bg-orange/[0.08] px-3.5 py-1.5 text-[12px] font-semibold text-orange transition-colors hover:bg-orange/15"
             >
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -174,6 +174,17 @@ export function Navbar() {
                 />
               </svg>
               Clientes
+            </Link>
+            <Link
+              href="/admin"
+              aria-label="Administración"
+              title="Administración del sitio"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 text-white/35 transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white/85"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
             </Link>
           </div>
 
