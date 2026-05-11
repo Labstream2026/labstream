@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PortfolioCategory } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -20,7 +21,10 @@ const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
 async function createProject(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/portfolio?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso para crear proyectos.");
+    redirect("/cms/portfolio");
+  }
 
   const title = String(formData.get("title") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")
@@ -33,10 +37,16 @@ async function createProject(formData: FormData) {
   const category = String(formData.get("category") ?? "COMERCIAL") as PortfolioCategory;
   const client = String(formData.get("client") ?? "").trim() || null;
 
-  if (!title || !slug) redirect("/cms/portfolio?error=invalid");
+  if (!title || !slug) {
+    await setError("Faltan campos obligatorios: título y slug.");
+    redirect("/cms/portfolio");
+  }
 
   const exists = await prisma.portfolioProject.findUnique({ where: { slug } });
-  if (exists) redirect("/cms/portfolio?error=exists");
+  if (exists) {
+    await setError(`Ya existe un proyecto con el slug "${slug}".`);
+    redirect("/cms/portfolio");
+  }
 
   const top = await prisma.portfolioProject.findFirst({
     orderBy: { order: "desc" },
@@ -56,24 +66,29 @@ async function createProject(formData: FormData) {
   });
 
   revalidatePath("/portafolio");
-  redirect(`/cms/portfolio/${created.id}?ok=created`);
+  await setSuccess("Proyecto creado — completa los detalles abajo.");
+  redirect(`/cms/portfolio/${created.id}`);
 }
 
 async function deleteProject(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/portfolio?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/portfolio");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.portfolioProject.delete({ where: { id } });
 
   revalidatePath("/portafolio");
   revalidatePath("/cms/portfolio");
-  redirect("/cms/portfolio?ok=deleted");
+  await setSuccess("Proyecto eliminado.");
+  redirect("/cms/portfolio");
 }
 
 export default async function PortfolioListPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string; q?: string; cat?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string }>;
 }) {
   await requireCmsUser();
   const sp = await props.searchParams;
@@ -115,8 +130,6 @@ export default async function PortfolioListPage(props: {
           /portafolio.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {/* Búsqueda + filtros */}
       <form
@@ -343,29 +356,3 @@ function FilterChip({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "deleted"
-      ? "Proyecto eliminado"
-      : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : error === "invalid"
-        ? "Faltan campos obligatorios"
-        : error === "exists"
-          ? "Ya existe un proyecto con ese slug"
-          : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

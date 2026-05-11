@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import { CmsRole, UserKind } from "@prisma/client";
 import { CmsShell } from "@/components/cms/CmsShell";
 import { CmsToaster } from "@/components/cms/Toaster";
+import { readFlash } from "@/lib/cms-flash";
 
 export default async function CmsLayout({
   children,
@@ -12,6 +13,10 @@ export default async function CmsLayout({
   const session = await auth();
   const hdrs = await headers();
   const path = hdrs.get("x-invoke-path") ?? hdrs.get("next-url") ?? "";
+  const flash = await readFlash();
+  const initialToast = flash
+    ? { kind: flash.kind, message: flash.message }
+    : null;
 
   const isLogin = path.includes("/cms/login");
 
@@ -19,7 +24,7 @@ export default async function CmsLayout({
     return (
       <>
         {children}
-        <CmsToaster />
+        <CmsToaster initial={initialToast} />
       </>
     );
   }
@@ -43,7 +48,7 @@ export default async function CmsLayout({
       >
         {children}
       </CmsShell>
-      <CmsToaster />
+      <CmsToaster initial={initialToast} />
     </>
   );
 }

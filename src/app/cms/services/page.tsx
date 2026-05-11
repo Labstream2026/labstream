@@ -3,11 +3,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError } from "@/lib/cms-flash";
 
 async function saveService(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/services?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/services");
+  }
 
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
@@ -29,7 +33,10 @@ async function saveService(formData: FormData) {
 async function createService(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/services?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/services");
+  }
 
   const title = String(formData.get("title") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")
@@ -39,10 +46,16 @@ async function createService(formData: FormData) {
     .replace(/^-+|-+$/g, "");
   const summary = String(formData.get("summary") ?? "").trim() || null;
 
-  if (!title || !slug) redirect("/cms/services?error=invalid");
+  if (!title || !slug) {
+    await setError("Faltan campos obligatorios: título y slug.");
+    redirect("/cms/services");
+  }
 
   const exists = await prisma.service.findUnique({ where: { slug } });
-  if (exists) redirect("/cms/services?error=exists");
+  if (exists) {
+    await setError(`Ya existe un servicio con el slug "${slug}".`);
+    redirect("/cms/services");
+  }
 
   const top = await prisma.service.findFirst({
     orderBy: { order: "desc" },

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { LeadStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Nuevo",
@@ -24,7 +25,10 @@ const STATUS_STYLES: Record<LeadStatus, string> = {
 async function quickUpdateStatus(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/leads?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/leads");
+  }
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as LeadStatus;
@@ -40,11 +44,12 @@ async function quickUpdateStatus(formData: FormData) {
   });
 
   revalidatePath("/cms/leads");
-  redirect("/cms/leads?ok=updated");
+  await setSuccess("Estado actualizado.");
+  redirect("/cms/leads");
 }
 
 export default async function LeadsListPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   await requireCmsUser();
   const sp = await props.searchParams;
@@ -98,8 +103,6 @@ export default async function LeadsListPage(props: {
           cliente.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       <form
         method="GET"
@@ -253,27 +256,3 @@ function FilterChip({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "updated"
-      ? "Estado actualizado"
-      : ok === "saved"
-        ? "Cambios guardados"
-        : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

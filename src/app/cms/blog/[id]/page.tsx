@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { BlogPostStatus, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -11,7 +12,10 @@ import { LivePreview } from "@/components/cms/LivePreview";
 async function savePost(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect(`/cms/blog?error=denied`);
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect(`/cms/blog`);
+  }
 
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
@@ -37,12 +41,18 @@ async function savePost(formData: FormData) {
   const readMinutesRaw = parseInt(String(formData.get("readMinutes") ?? ""), 10);
   const readMinutes = Number.isFinite(readMinutesRaw) ? readMinutesRaw : null;
 
-  if (!title || !slug) redirect(`/cms/blog/${id}?error=invalid`);
+  if (!title || !slug) {
+    await setError("Faltan campos obligatorios: título y slug.");
+    redirect(`/cms/blog/${id}`);
+  }
 
   const exists = await prisma.blogPost.findFirst({
     where: { slug, NOT: { id } },
   });
-  if (exists) redirect(`/cms/blog/${id}?error=exists`);
+  if (exists) {
+    await setError(`Ya existe un post con el slug "${slug}".`);
+    redirect(`/cms/blog/${id}`);
+  }
 
   const current = await prisma.blogPost.findUnique({ where: { id } });
   const justPublished =
@@ -71,16 +81,15 @@ async function savePost(formData: FormData) {
   revalidatePath("/blog");
   revalidatePath(`/blog/${slug}`);
   revalidatePath("/cms/blog");
-  redirect(`/cms/blog/${id}?ok=saved`);
+  await setSuccess("Cambios guardados.");
+  redirect(`/cms/blog/${id}`);
 }
 
 export default async function BlogDetailPage(props: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; error?: string }>;
 }) {
   await requireCmsUser();
   const { id } = await props.params;
-  const sp = await props.searchParams;
 
   const post = await prisma.blogPost.findUnique({ where: { id } });
   if (!post) notFound();
@@ -116,8 +125,6 @@ export default async function BlogDetailPage(props: {
           {post.title}
         </h1>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       <LivePreview
         model="blog"
@@ -304,31 +311,3 @@ function Textarea({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "created"
-        ? "Post creado — completa el contenido abajo"
-        : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : error === "invalid"
-        ? "Faltan campos obligatorios (título y slug)"
-        : error === "exists"
-          ? "Ya existe un post con ese slug"
-          : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

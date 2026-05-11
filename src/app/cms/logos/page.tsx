@@ -2,13 +2,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 
 async function saveLogo(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/logos?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/logos");
+  }
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -20,7 +24,10 @@ async function saveLogo(formData: FormData) {
   const orderRaw = parseInt(String(formData.get("order") ?? "0"), 10);
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
 
-  if (!name || !logoUrl) redirect("/cms/logos?error=invalid");
+  if (!name || !logoUrl) {
+    await setError("Faltan campos obligatorios: nombre y URL del logo.");
+    redirect("/cms/logos");
+  }
 
   await prisma.clientLogo.update({
     where: { id },
@@ -29,18 +36,25 @@ async function saveLogo(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/cms/logos");
-  redirect("/cms/logos?ok=saved");
+  await setSuccess("Cambios guardados.");
+  redirect("/cms/logos");
 }
 
 async function createLogo(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/logos?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/logos");
+  }
 
   const name = String(formData.get("name") ?? "").trim();
   const logoUrl = String(formData.get("logoUrl") ?? "").trim();
 
-  if (!name || !logoUrl) redirect("/cms/logos?error=invalid");
+  if (!name || !logoUrl) {
+    await setError("Faltan campos obligatorios: nombre y URL del logo.");
+    redirect("/cms/logos");
+  }
 
   const top = await prisma.clientLogo.findFirst({
     orderBy: { order: "desc" },
@@ -59,7 +73,8 @@ async function createLogo(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/cms/logos");
-  redirect("/cms/logos?ok=created");
+  await setSuccess("Logo creado.");
+  redirect("/cms/logos");
 }
 
 async function reorderLogos(formData: FormData) {
@@ -82,21 +97,22 @@ async function reorderLogos(formData: FormData) {
 async function deleteLogo(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/logos?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/logos");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.clientLogo.delete({ where: { id } });
 
   revalidatePath("/");
   revalidatePath("/cms/logos");
-  redirect("/cms/logos?ok=deleted");
+  await setSuccess("Logo eliminado.");
+  redirect("/cms/logos");
 }
 
-export default async function LogosPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function LogosPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const items = await prisma.clientLogo.findMany({
     orderBy: { order: "asc" },
@@ -122,8 +138,6 @@ export default async function LogosPage(props: {
           y pega la URL pública aquí. Recomendado: SVG o PNG transparente.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {items.length === 0 ? (
         <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
@@ -269,31 +283,3 @@ function DeleteButton({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "created"
-        ? "Logo creado"
-        : ok === "deleted"
-          ? "Logo eliminado"
-          : "Listo"
-    : error === "denied"
-      ? "No tienes permiso para esta acción"
-      : error === "invalid"
-        ? "Faltan campos obligatorios (nombre y URL)"
-        : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

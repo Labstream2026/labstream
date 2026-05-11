@@ -2,13 +2,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/testimonials?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/testimonials");
+  }
 
   const id = String(formData.get("id") ?? "");
   const authorName = String(formData.get("authorName") ?? "").trim();
@@ -25,7 +29,10 @@ async function saveTestimonial(formData: FormData) {
   const orderRaw = parseInt(String(formData.get("order") ?? "0"), 10);
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
 
-  if (!authorName || !body) redirect("/cms/testimonials?error=invalid");
+  if (!authorName || !body) {
+    await setError("Faltan campos obligatorios: nombre y testimonio.");
+    redirect("/cms/testimonials");
+  }
 
   await prisma.testimonial.update({
     where: { id },
@@ -44,18 +51,25 @@ async function saveTestimonial(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/cms/testimonials");
-  redirect("/cms/testimonials?ok=saved");
+  await setSuccess("Cambios guardados.");
+  redirect("/cms/testimonials");
 }
 
 async function createTestimonial(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/testimonials?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/testimonials");
+  }
 
   const authorName = String(formData.get("authorName") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
 
-  if (!authorName || !body) redirect("/cms/testimonials?error=invalid");
+  if (!authorName || !body) {
+    await setError("Faltan campos obligatorios: nombre y testimonio.");
+    redirect("/cms/testimonials");
+  }
 
   const top = await prisma.testimonial.findFirst({
     orderBy: { order: "desc" },
@@ -76,7 +90,8 @@ async function createTestimonial(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/cms/testimonials");
-  redirect("/cms/testimonials?ok=created");
+  await setSuccess("Testimonio creado.");
+  redirect("/cms/testimonials");
 }
 
 async function reorderTestimonials(formData: FormData) {
@@ -102,21 +117,22 @@ async function reorderTestimonials(formData: FormData) {
 async function deleteTestimonial(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/testimonials?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/testimonials");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.testimonial.delete({ where: { id } });
 
   revalidatePath("/");
   revalidatePath("/cms/testimonials");
-  redirect("/cms/testimonials?ok=deleted");
+  await setSuccess("Testimonio eliminado.");
+  redirect("/cms/testimonials");
 }
 
-export default async function TestimonialsPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function TestimonialsPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const items = await prisma.testimonial.findMany({
     orderBy: [{ featured: "desc" }, { order: "asc" }],
@@ -138,8 +154,6 @@ export default async function TestimonialsPage(props: {
           Lo que dicen los clientes. Aparecen en el carrusel de la home.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {items.length === 0 ? (
         <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
@@ -345,31 +359,3 @@ function Field({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "created"
-        ? "Testimonio creado"
-        : ok === "deleted"
-          ? "Testimonio eliminado"
-          : "Listo"
-    : error === "denied"
-      ? "No tienes permiso para esta acción"
-      : error === "invalid"
-        ? "Faltan campos obligatorios"
-        : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

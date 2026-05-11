@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { LeadStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Nuevo",
@@ -16,7 +17,10 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
 async function saveLead(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/leads?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/leads");
+  }
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "") as LeadStatus;
@@ -24,7 +28,10 @@ async function saveLead(formData: FormData) {
   if (!Object.keys(STATUS_LABELS).includes(status)) return;
 
   const current = await prisma.lead.findUnique({ where: { id } });
-  if (!current) redirect("/cms/leads?error=invalid");
+  if (!current) {
+    await setError("Lead no encontrado.");
+    redirect("/cms/leads");
+  }
 
   await prisma.lead.update({
     where: { id },
@@ -40,26 +47,29 @@ async function saveLead(formData: FormData) {
 
   revalidatePath("/cms/leads");
   revalidatePath(`/cms/leads/${id}`);
-  redirect(`/cms/leads/${id}?ok=saved`);
+  await setSuccess("Cambios guardados.");
+  redirect(`/cms/leads/${id}`);
 }
 
 async function deleteLead(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/leads?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/leads");
+  }
   const id = String(formData.get("id") ?? "");
   await prisma.lead.delete({ where: { id } });
   revalidatePath("/cms/leads");
-  redirect("/cms/leads?ok=deleted");
+  await setSuccess("Lead eliminado.");
+  redirect("/cms/leads");
 }
 
 export default async function LeadDetailPage(props: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; error?: string }>;
 }) {
   await requireCmsUser();
   const { id } = await props.params;
-  const sp = await props.searchParams;
 
   const lead = await prisma.lead.findUnique({ where: { id } });
   if (!lead) notFound();
@@ -106,8 +116,6 @@ export default async function LeadDetailPage(props: {
             : ""}
         </div>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       <div className="mb-6 lg rounded-2xl p-6">
         <div className="mb-2 text-[11px] uppercase tracking-wider text-white/45">
@@ -187,29 +195,3 @@ export default async function LeadDetailPage(props: {
   }
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "deleted"
-        ? "Lead eliminado"
-        : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : error === "invalid"
-        ? "Lead no encontrado"
-        : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

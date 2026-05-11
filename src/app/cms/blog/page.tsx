@@ -4,11 +4,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 
 async function createPost(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/blog?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/blog");
+  }
 
   const title = String(formData.get("title") ?? "").trim();
   const slug = String(formData.get("slug") ?? "")
@@ -18,10 +22,16 @@ async function createPost(formData: FormData) {
     .replace(/^-+|-+$/g, "");
   const category = String(formData.get("category") ?? "").trim() || null;
 
-  if (!title || !slug) redirect("/cms/blog?error=invalid");
+  if (!title || !slug) {
+    await setError("Faltan campos obligatorios.");
+    redirect("/cms/blog");
+  }
 
   const exists = await prisma.blogPost.findUnique({ where: { slug } });
-  if (exists) redirect("/cms/blog?error=exists");
+  if (exists) {
+    await setError(`Ya existe un post con el slug "${slug}".`);
+    redirect("/cms/blog");
+  }
 
   const created = await prisma.blogPost.create({
     data: {
@@ -34,24 +44,29 @@ async function createPost(formData: FormData) {
   });
 
   revalidatePath("/blog");
-  redirect(`/cms/blog/${created.id}?ok=created`);
+  await setSuccess("Post creado — completa el contenido abajo.");
+  redirect(`/cms/blog/${created.id}`);
 }
 
 async function deletePost(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/blog?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/blog");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.blogPost.delete({ where: { id } });
 
   revalidatePath("/blog");
   revalidatePath("/cms/blog");
-  redirect("/cms/blog?ok=deleted");
+  await setSuccess("Post eliminado.");
+  redirect("/cms/blog");
 }
 
 export default async function BlogListPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string; q?: string; cat?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; status?: string }>;
 }) {
   await requireCmsUser();
   const sp = await props.searchParams;
@@ -119,8 +134,6 @@ export default async function BlogListPage(props: {
           como &ldquo;Publicado&rdquo;.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {/* Búsqueda */}
       <form
@@ -357,29 +370,3 @@ function FilterChip({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "deleted"
-      ? "Post eliminado"
-      : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : error === "invalid"
-        ? "Faltan campos obligatorios"
-        : error === "exists"
-          ? "Ya existe un post con ese slug"
-          : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

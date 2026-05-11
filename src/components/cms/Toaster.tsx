@@ -1,70 +1,88 @@
 "use client";
 
-import { useEffect } from "react";
-import { Toaster as SonnerToaster, toast } from "sonner";
+import { useEffect, useState } from "react";
 
-const COOKIE = "cms_flash";
+type ToastKind = "success" | "error" | "info";
 
-type Flash = {
-  kind: "success" | "error" | "info";
-  message: string;
-  fieldErrors?: Record<string, string>;
+type Props = {
+  /** Initial toast injected by the server from the flash cookie. */
+  initial?: { kind: ToastKind; message: string } | null;
 };
 
-function readFlash(): Flash | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${COOKIE}=`));
-  if (!match) return null;
-  const raw = match.slice(COOKIE.length + 1);
-  // Clear immediately so a refresh doesn't re-fire it.
-  document.cookie = `${COOKIE}=; path=/; max-age=0; samesite=lax`;
-  try {
-    return JSON.parse(decodeURIComponent(raw)) as Flash;
-  } catch {
-    return null;
-  }
-}
+export function CmsToaster({ initial }: Props) {
+  const [dismissed, setDismissed] = useState(false);
+  const hasInitial = !!initial;
+  const isError = initial?.kind === "error";
 
-function FlashReader() {
+  // Clear the flash cookie after first paint so reloading doesn't re-show it,
+  // and schedule auto-dismiss. Empty deps so the timer is established only once
+  // per mount — re-renders with a freshly-constructed `initial` object (new
+  // reference each layout render) don't reset the dismissal timer.
   useEffect(() => {
-    const flash = readFlash();
-    if (!flash) return;
-    // Defer to next tick so Sonner's <Toaster> has registered with the toast store.
-    const timer = setTimeout(() => {
-      console.log("[FlashReader] firing toast:", flash);
-      if (flash.kind === "success") {
-        toast.success(flash.message, { duration: 3000 });
-      } else if (flash.kind === "error") {
-        toast.error(flash.message, { duration: 6000 });
-      } else {
-        toast(flash.message, { duration: 4000 });
-      }
-    }, 0);
-    return () => clearTimeout(timer);
+    if (!hasInitial) return;
+    document.cookie = "cms_flash=; path=/; max-age=0; samesite=lax";
+    const t = window.setTimeout(
+      () => setDismissed(true),
+      isError ? 6000 : 3000,
+    );
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return null;
-}
 
-export function CmsToaster() {
+  if (!initial || dismissed) return null;
+
+  const borderClass =
+    initial.kind === "success"
+      ? "border-green-500/30"
+      : initial.kind === "error"
+        ? "border-red-500/30"
+        : "border-white/10";
+  const dotClass =
+    initial.kind === "success"
+      ? "bg-green-400"
+      : initial.kind === "error"
+        ? "bg-red-400"
+        : "bg-white/50";
+
   return (
-    <>
-      <SonnerToaster
-        position="bottom-right"
-        theme="dark"
-        toastOptions={{
-          classNames: {
-            toast:
-              "!bg-[#141414] !border !border-white/10 !text-white !rounded-xl !shadow-lg",
-            success: "!border-green-500/30",
-            error: "!border-red-500/30",
-            title: "!font-medium !text-[13px]",
-            description: "!text-[12px] !text-white/60",
-          },
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed bottom-4 right-4 z-[9999] flex w-[320px] flex-col gap-2"
+    >
+      <div
+        role={initial.kind === "error" ? "alert" : "status"}
+        className={`pointer-events-auto flex items-start gap-3 rounded-xl border bg-[#141414] px-4 py-3 shadow-2xl ${borderClass}`}
+        style={{
+          animation:
+            "cms-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1), cms-toast-out 220ms cubic-bezier(0.4, 0, 1, 1) " +
+            (initial.kind === "error" ? "5780ms" : "2780ms") +
+            " forwards",
         }}
-      />
-      <FlashReader />
-    </>
+      >
+        <span
+          className={`mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${dotClass}`}
+        />
+        <p className="flex-1 text-[13px] leading-relaxed text-white">
+          {initial.message}
+        </p>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          aria-label="Cerrar"
+          className="text-[16px] leading-none text-white/40 hover:text-white"
+        >
+          ×
+        </button>
+      </div>
+      <style>{`
+        @keyframes cms-toast-in {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes cms-toast-out {
+          to { opacity: 0; transform: translateX(20px); }
+        }
+      `}</style>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { Prisma } from "@prisma/client";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -29,7 +30,10 @@ function parseValuesJson(raw: string): ValueItem[] {
 async function saveAbout(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/about?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/about");
+  }
 
   const heroEyebrow =
     String(formData.get("heroEyebrow") ?? "").trim() || null;
@@ -72,14 +76,12 @@ async function saveAbout(formData: FormData) {
 
   revalidatePath("/nosotros");
   revalidatePath("/cms/about");
-  redirect("/cms/about?ok=saved");
+  await setSuccess("Cambios guardados.");
+  redirect("/cms/about");
 }
 
-export default async function AboutPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function AboutPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const about = await prisma.aboutContent.upsert({
     where: { id: "singleton" },
@@ -106,8 +108,6 @@ export default async function AboutPage(props: {
           y valores.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       <LivePreview
         model="about"
@@ -243,23 +243,3 @@ function Labeled({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? "Cambios guardados"
-    : error === "denied"
-      ? "No tienes permiso"
-      : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

@@ -37,14 +37,14 @@ export async function setError(
 }
 
 /**
- * Read and clear the flash. Server-side use (e.g. in a server component that
- * passes it to a client `<Toaster>`); the client reader handles the common case.
+ * Read the flash from cookies. Note: cookies cannot be modified inside a
+ * layout/page (only in a server action or route handler), so the client toaster
+ * is responsible for clearing the cookie via `document.cookie` after consuming.
  */
-export async function consumeFlash(): Promise<Flash | null> {
+export async function readFlash(): Promise<Flash | null> {
   const store = await cookies();
   const raw = store.get(COOKIE)?.value;
   if (!raw) return null;
-  store.set(COOKIE, "", { path: "/", maxAge: 0 });
   try {
     return JSON.parse(decodeURIComponent(raw)) as Flash;
   } catch {

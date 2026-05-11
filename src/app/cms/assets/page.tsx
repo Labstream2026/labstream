@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { AssetSource } from "@prisma/client";
 
 async function addUrlAsset(formData: FormData) {
@@ -12,7 +13,8 @@ async function addUrlAsset(formData: FormData) {
   const alt = String(formData.get("alt") ?? "").trim() || null;
 
   if (!url || !/^https?:\/\//i.test(url)) {
-    redirect("/cms/assets?error=invalid_url");
+    await setError("URL inválida. Debe empezar con http o https.");
+    redirect("/cms/assets");
   }
 
   await prisma.asset.create({
@@ -25,7 +27,8 @@ async function addUrlAsset(formData: FormData) {
   });
 
   revalidatePath("/cms/assets");
-  redirect("/cms/assets?ok=added");
+  await setSuccess("Archivo agregado.");
+  redirect("/cms/assets");
 }
 
 async function deleteAsset(formData: FormData) {
@@ -36,11 +39,8 @@ async function deleteAsset(formData: FormData) {
   revalidatePath("/cms/assets");
 }
 
-export default async function AssetsPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function AssetsPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const assets = await prisma.asset.findMany({
     orderBy: { createdAt: "desc" },
@@ -65,19 +65,6 @@ export default async function AssetsPage(props: {
           Cloudinary, etc.).
         </p>
       </div>
-
-      {sp.ok === "added" && (
-        <Banner kind="ok" text="Recurso agregado correctamente." />
-      )}
-      {sp.ok === "uploaded" && (
-        <Banner kind="ok" text="Archivo subido correctamente." />
-      )}
-      {sp.error === "invalid_url" && (
-        <Banner kind="error" text="URL inválida. Debe empezar con http o https." />
-      )}
-      {sp.error === "upload_failed" && (
-        <Banner kind="error" text="No fue posible subir el archivo." />
-      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="lg rounded-2xl p-6">
@@ -218,18 +205,3 @@ export default async function AssetsPage(props: {
   );
 }
 
-function Banner({ kind, text }: { kind: "ok" | "error"; text: string }) {
-  const ok = kind === "ok";
-  return (
-    <div
-      className="mb-4 rounded-lg border px-3.5 py-2.5 text-[13px]"
-      style={{
-        borderColor: ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)",
-        background: ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-        color: ok ? "#A7F3C0" : "#FCA5A5",
-      }}
-    >
-      {text}
-    </div>
-  );
-}

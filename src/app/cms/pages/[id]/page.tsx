@@ -8,6 +8,7 @@ import {
   requireSuperAdmin,
   isSuperAdmin,
 } from "@/lib/cms-guard";
+import { setSuccess } from "@/lib/cms-flash";
 import { PageStatus, Prisma } from "@prisma/client";
 import {
   BLOCK_TYPES,
@@ -63,7 +64,8 @@ async function deletePage(formData: FormData) {
   await prisma.page.delete({ where: { id } });
   revalidatePath("/cms/pages");
   revalidatePath("/");
-  redirect("/cms/pages?ok=deleted");
+  await setSuccess("Página eliminada.");
+  redirect("/cms/pages");
 }
 
 async function saveBlock(formData: FormData) {

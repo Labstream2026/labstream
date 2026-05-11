@@ -2,12 +2,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { SortableList } from "@/components/cms/SortableList";
 
 async function saveFaq(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/faqs?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/faqs");
+  }
 
   const id = String(formData.get("id") ?? "");
   const question = String(formData.get("question") ?? "").trim();
@@ -17,7 +21,10 @@ async function saveFaq(formData: FormData) {
   const orderRaw = parseInt(String(formData.get("order") ?? "0"), 10);
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
 
-  if (!question || !answer) redirect("/cms/faqs?error=invalid");
+  if (!question || !answer) {
+    await setError("Faltan campos obligatorios: pregunta y respuesta.");
+    redirect("/cms/faqs");
+  }
 
   await prisma.faqItem.update({
     where: { id },
@@ -27,18 +34,25 @@ async function saveFaq(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/contacto");
   revalidatePath("/cms/faqs");
-  redirect("/cms/faqs?ok=saved");
+  await setSuccess("Cambios guardados.");
+  redirect("/cms/faqs");
 }
 
 async function createFaq(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/faqs?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/faqs");
+  }
 
   const question = String(formData.get("question") ?? "").trim();
   const answer = String(formData.get("answer") ?? "").trim();
 
-  if (!question || !answer) redirect("/cms/faqs?error=invalid");
+  if (!question || !answer) {
+    await setError("Faltan campos obligatorios: pregunta y respuesta.");
+    redirect("/cms/faqs");
+  }
 
   const top = await prisma.faqItem.findFirst({
     orderBy: { order: "desc" },
@@ -58,7 +72,8 @@ async function createFaq(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/contacto");
   revalidatePath("/cms/faqs");
-  redirect("/cms/faqs?ok=created");
+  await setSuccess("FAQ creada.");
+  redirect("/cms/faqs");
 }
 
 async function reorderFaqs(formData: FormData) {
@@ -82,7 +97,10 @@ async function reorderFaqs(formData: FormData) {
 async function deleteFaq(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/faqs?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/faqs");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.faqItem.delete({ where: { id } });
@@ -90,14 +108,12 @@ async function deleteFaq(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/contacto");
   revalidatePath("/cms/faqs");
-  redirect("/cms/faqs?ok=deleted");
+  await setSuccess("FAQ eliminada.");
+  redirect("/cms/faqs");
 }
 
-export default async function FaqsPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function FaqsPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const items = await prisma.faqItem.findMany({
     orderBy: { order: "asc" },
@@ -119,8 +135,6 @@ export default async function FaqsPage(props: {
           Aparecen en el accordion de la home y al final de /contacto.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {items.length === 0 ? (
         <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
@@ -269,31 +283,3 @@ function DeleteButton({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "created"
-        ? "FAQ creada"
-        : ok === "deleted"
-          ? "FAQ eliminada"
-          : "Listo"
-    : error === "denied"
-      ? "No tienes permiso para esta acción"
-      : error === "invalid"
-        ? "Faltan campos obligatorios (pregunta y respuesta)"
-        : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

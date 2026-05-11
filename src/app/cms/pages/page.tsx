@@ -7,6 +7,7 @@ import {
   isSuperAdmin,
   listAccessiblePageIds,
 } from "@/lib/cms-guard";
+import { setError } from "@/lib/cms-flash";
 import { PageStatus } from "@prisma/client";
 
 async function createPage(formData: FormData) {
@@ -23,11 +24,15 @@ async function createPage(formData: FormData) {
     .replace(/^-+|-+$/g, "");
 
   if (!title || !slug) {
-    redirect("/cms/pages?error=invalid");
+    await setError("Faltan campos obligatorios: título y slug.");
+    redirect("/cms/pages");
   }
 
   const exists = await prisma.page.findUnique({ where: { slug } });
-  if (exists) redirect("/cms/pages?error=exists");
+  if (exists) {
+    await setError(`Ya existe una página con el slug "${slug}".`);
+    redirect("/cms/pages");
+  }
 
   const page = await prisma.page.create({
     data: {
@@ -42,11 +47,8 @@ async function createPage(formData: FormData) {
   redirect(`/cms/pages/${page.id}`);
 }
 
-export default async function PagesIndex(props: {
-  searchParams: Promise<{ error?: string; ok?: string }>;
-}) {
+export default async function PagesIndex() {
   const me = await requireCmsUser();
-  const sp = await props.searchParams;
   const isSuper = isSuperAdmin(me.role);
 
   const access = await listAccessiblePageIds(me.id, me.role);
@@ -76,18 +78,6 @@ export default async function PagesIndex(props: {
         </div>
       </div>
 
-      {sp.error === "denied" && (
-        <Banner kind="error" text="No tienes permiso para esa acción." />
-      )}
-      {sp.error === "exists" && (
-        <Banner kind="error" text="Ya existe una página con ese slug." />
-      )}
-      {sp.error === "invalid" && (
-        <Banner kind="error" text="Datos inválidos." />
-      )}
-      {sp.ok === "deleted" && (
-        <Banner kind="ok" text="Página eliminada." />
-      )}
       {access.all === false && pages.length === 0 && (
         <div className="lg rounded-2xl p-8 text-center text-[14px] text-white/55">
           Aún no tienes páginas asignadas. Pídele al Super Admin que te asigne una desde el editor de cada página.
@@ -213,18 +203,3 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function Banner({ kind, text }: { kind: "error" | "ok"; text: string }) {
-  const ok = kind === "ok";
-  return (
-    <div
-      className="mb-4 rounded-lg border px-3.5 py-2.5 text-[13px]"
-      style={{
-        borderColor: ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)",
-        background: ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-        color: ok ? "#A7F3C0" : "#FCA5A5",
-      }}
-    >
-      {text}
-    </div>
-  );
-}

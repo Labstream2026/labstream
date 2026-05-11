@@ -2,13 +2,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 
 async function saveMember(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/team?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/team");
+  }
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -23,7 +27,10 @@ async function saveMember(formData: FormData) {
   const orderRaw = parseInt(String(formData.get("order") ?? "0"), 10);
   const order = Number.isFinite(orderRaw) ? orderRaw : 0;
 
-  if (!name || !role) redirect("/cms/team?error=invalid");
+  if (!name || !role) {
+    await setError("Faltan campos obligatorios: nombre y rol.");
+    redirect("/cms/team");
+  }
 
   await prisma.teamMember.update({
     where: { id },
@@ -43,18 +50,25 @@ async function saveMember(formData: FormData) {
 
   revalidatePath("/nosotros");
   revalidatePath("/cms/team");
-  redirect("/cms/team?ok=saved");
+  await setSuccess("Cambios guardados.");
+  redirect("/cms/team");
 }
 
 async function createMember(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/team?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/team");
+  }
 
   const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim();
 
-  if (!name || !role) redirect("/cms/team?error=invalid");
+  if (!name || !role) {
+    await setError("Faltan campos obligatorios: nombre y rol.");
+    redirect("/cms/team");
+  }
 
   const top = await prisma.teamMember.findFirst({
     orderBy: { order: "desc" },
@@ -72,7 +86,8 @@ async function createMember(formData: FormData) {
 
   revalidatePath("/nosotros");
   revalidatePath("/cms/team");
-  redirect("/cms/team?ok=created");
+  await setSuccess("Miembro agregado.");
+  redirect("/cms/team");
 }
 
 async function reorderMembers(formData: FormData) {
@@ -95,21 +110,22 @@ async function reorderMembers(formData: FormData) {
 async function deleteMember(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect("/cms/team?error=denied");
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect("/cms/team");
+  }
 
   const id = String(formData.get("id") ?? "");
   await prisma.teamMember.delete({ where: { id } });
 
   revalidatePath("/nosotros");
   revalidatePath("/cms/team");
-  redirect("/cms/team?ok=deleted");
+  await setSuccess("Miembro eliminado.");
+  redirect("/cms/team");
 }
 
-export default async function TeamPage(props: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function TeamPage() {
   await requireCmsUser();
-  const sp = await props.searchParams;
 
   const items = await prisma.teamMember.findMany({
     orderBy: [{ featured: "desc" }, { order: "asc" }],
@@ -135,8 +151,6 @@ export default async function TeamPage(props: {
           y pega la URL aquí.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       {items.length === 0 ? (
         <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">
@@ -321,31 +335,3 @@ function DeleteButton({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? ok === "saved"
-      ? "Cambios guardados"
-      : ok === "created"
-        ? "Miembro agregado"
-        : ok === "deleted"
-          ? "Miembro eliminado"
-          : "Listo"
-    : error === "denied"
-      ? "No tienes permiso"
-      : error === "invalid"
-        ? "Faltan campos obligatorios (nombre y rol)"
-        : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}

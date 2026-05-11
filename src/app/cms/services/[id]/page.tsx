@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
+import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -41,7 +42,10 @@ function parseRowsJson<T extends Record<string, string>>(
 async function saveServiceDetail(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
-  if (!canEditPages(me.role)) redirect(`/cms/services?error=denied`);
+  if (!canEditPages(me.role)) {
+    await setError("No tienes permiso.");
+    redirect(`/cms/services`);
+  }
 
   const id = String(formData.get("id") ?? "");
   const longDescription =
@@ -71,7 +75,10 @@ async function saveServiceDetail(formData: FormData) {
       : Prisma.JsonNull;
 
   const svc = await prisma.service.findUnique({ where: { id } });
-  if (!svc) redirect(`/cms/services?error=invalid`);
+  if (!svc) {
+    await setError("No se encontró el servicio.");
+    redirect(`/cms/services`);
+  }
 
   await prisma.service.update({
     where: { id },
@@ -88,16 +95,15 @@ async function saveServiceDetail(formData: FormData) {
   revalidatePath("/servicios");
   if (svc) revalidatePath(`/servicio/${svc.slug}`);
   revalidatePath(`/cms/services/${id}`);
-  redirect(`/cms/services/${id}?ok=saved`);
+  await setSuccess("Cambios guardados.");
+  redirect(`/cms/services/${id}`);
 }
 
 export default async function ServiceDetailPage(props: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; error?: string }>;
 }) {
   await requireCmsUser();
   const { id } = await props.params;
-  const sp = await props.searchParams;
 
   const svc = await prisma.service.findUnique({ where: { id } });
   if (!svc) notFound();
@@ -138,8 +144,6 @@ export default async function ServiceDetailPage(props: {
           resumen corto, usa la lista de servicios.
         </p>
       </div>
-
-      <Banner ok={sp.ok} error={sp.error} />
 
       <LivePreview
         model="service"
@@ -309,23 +313,3 @@ function Textarea({
   );
 }
 
-function Banner({ ok, error }: { ok?: string; error?: string }) {
-  if (!ok && !error) return null;
-  const isOk = !!ok;
-  const text = isOk
-    ? "Cambios guardados"
-    : error === "denied"
-      ? "No tienes permiso"
-      : "Error";
-  return (
-    <div
-      className={`mb-6 rounded-xl border px-4 py-3 text-[13px] ${
-        isOk
-          ? "border-green-500/30 bg-green-500/10 text-green-200"
-          : "border-red-500/30 bg-red-500/10 text-red-200"
-      }`}
-    >
-      {text}
-    </div>
-  );
-}
