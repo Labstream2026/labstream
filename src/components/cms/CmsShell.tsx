@@ -60,6 +60,12 @@ export function CmsShell({
         >
           Ir a la Webapp →
         </Link>
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] text-white/45">
+          <span>Busca rápido con</span>
+          <kbd className="rounded border border-white/15 bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-white/75">
+            ⌘K
+          </kbd>
+        </div>
       </div>
 
       <div className="mb-1 mt-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-white/30">

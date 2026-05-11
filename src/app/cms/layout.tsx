@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import { CmsRole, UserKind } from "@prisma/client";
 import { CmsShell } from "@/components/cms/CmsShell";
 import { CmsToaster } from "@/components/cms/Toaster";
+import { CommandPalette } from "@/components/cms/CommandPalette";
 import { readFlash } from "@/lib/cms-flash";
 
 export default async function CmsLayout({
@@ -49,6 +50,7 @@ export default async function CmsLayout({
         {children}
       </CmsShell>
       <CmsToaster initial={initialToast} />
+      <CommandPalette />
     </>
   );
 }
