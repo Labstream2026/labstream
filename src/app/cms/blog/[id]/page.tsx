@@ -8,7 +8,15 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts } from "@/components/cms/form";
+import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts, SectionNav } from "@/components/cms/form";
+
+const BLOG_SECTIONS = [
+  { id: "basicos", label: "Básicos" },
+  { id: "portada", label: "Portada" },
+  { id: "contenido", label: "Contenido" },
+  { id: "autor", label: "Autor" },
+  { id: "publicacion", label: "Publicación" },
+];
 
 async function savePost(formData: FormData) {
   "use server";
@@ -115,11 +123,14 @@ export default async function BlogDetailPage(props: {
         </h1>
       </div>
 
-      <LivePreview
-        model="blog"
-        recordId={post.id}
-        previewPath={`/blog/${post.slug}`}
-      >
+      <div className="lg:grid lg:grid-cols-[180px_1fr] lg:gap-8">
+        <SectionNav sections={BLOG_SECTIONS} />
+
+        <LivePreview
+          model="blog"
+          recordId={post.id}
+          previewPath={`/blog/${post.slug}`}
+        >
         <form
           action={savePost}
           className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
@@ -127,7 +138,7 @@ export default async function BlogDetailPage(props: {
           <input type="hidden" name="id" value={post.id} />
           <FormShortcuts />
 
-        <Section title="Básicos">
+        <Section id="basicos" title="Básicos">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Título" required>
               <Input name="title" defaultValue={post.title} required />
@@ -158,7 +169,7 @@ export default async function BlogDetailPage(props: {
           </Field>
         </Section>
 
-        <Section title="Imagen de portada">
+        <Section id="portada" title="Imagen de portada">
           <ImageField
             name="coverImageUrl"
             defaultValue={post.coverImageUrl}
@@ -167,13 +178,14 @@ export default async function BlogDetailPage(props: {
         </Section>
 
         <Section
+          id="contenido"
           title="Contenido"
           help="Markdown con barra de herramientas y preview en vivo. La barra inserta sintaxis correcta; el preview muestra cómo se verá publicado."
         >
           <MarkdownEditor name="content" defaultValue={post.content} rows={20} />
         </Section>
 
-        <Section title="Autor">
+        <Section id="autor" title="Autor">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Nombre">
               <Input name="authorName" defaultValue={post.authorName ?? ""} />
@@ -188,7 +200,7 @@ export default async function BlogDetailPage(props: {
           </div>
         </Section>
 
-        <Section title="Publicación">
+        <Section id="publicacion" title="Publicación">
           <div className="flex flex-wrap items-end gap-5">
             <Field label="Estado">
               <Select name="status" defaultValue={post.status}>
@@ -218,7 +230,8 @@ export default async function BlogDetailPage(props: {
 
           <FormActions cancelHref="/cms/blog" submitLabel="Guardar" />
         </form>
-      </LivePreview>
+        </LivePreview>
+      </div>
     </div>
   );
 }

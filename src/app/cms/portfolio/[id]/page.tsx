@@ -8,7 +8,17 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts } from "@/components/cms/form";
+import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts, SectionNav } from "@/components/cms/form";
+
+const PORTFOLIO_SECTIONS = [
+  { id: "basicos", label: "Básicos" },
+  { id: "media", label: "Media" },
+  { id: "contenido", label: "Brief / proceso / resultado" },
+  { id: "galeria", label: "Galería" },
+  { id: "before-after", label: "Before / After" },
+  { id: "creditos", label: "Créditos" },
+  { id: "publicacion", label: "Publicación" },
+];
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -216,11 +226,14 @@ export default async function PortfolioDetailPage(props: {
         </h1>
       </div>
 
-      <LivePreview
-        model="portfolio"
-        recordId={project.id}
-        previewPath={`/portafolio/${project.slug}`}
-      >
+      <div className="lg:grid lg:grid-cols-[180px_1fr] lg:gap-8">
+        <SectionNav sections={PORTFOLIO_SECTIONS} />
+
+        <LivePreview
+          model="portfolio"
+          recordId={project.id}
+          previewPath={`/portafolio/${project.slug}`}
+        >
         <form
           action={saveProject}
           className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
@@ -228,8 +241,7 @@ export default async function PortfolioDetailPage(props: {
           <input type="hidden" name="id" value={project.id} />
           <FormShortcuts />
 
-        {/* Sección 1: Básicos */}
-        <Section title="Básicos">
+        <Section id="basicos" title="Básicos">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Título" required>
               <Input name="title" defaultValue={project.title} required />
@@ -269,8 +281,7 @@ export default async function PortfolioDetailPage(props: {
           </Field>
         </Section>
 
-        {/* Sección 2: Media */}
-        <Section title="Media">
+        <Section id="media" title="Media">
           <ImageField
             name="coverImageUrl"
             label="Imagen de portada"
@@ -290,8 +301,7 @@ export default async function PortfolioDetailPage(props: {
           </Field>
         </Section>
 
-        {/* Sección 3: Contenido editorial */}
-        <Section title="Brief / proceso / resultado">
+        <Section id="contenido" title="Brief / proceso / resultado">
           <Field label="Brief" help="Qué pidió el cliente">
             <Textarea name="brief" defaultValue={project.brief ?? ""} rows={3} />
           </Field>
@@ -303,8 +313,7 @@ export default async function PortfolioDetailPage(props: {
           </Field>
         </Section>
 
-        {/* Sección 4: Galería */}
-        <Section title="Galería" help="Imágenes adicionales que aparecen en el grid del detalle.">
+        <Section id="galeria" title="Galería" help="Imágenes adicionales que aparecen en el grid del detalle.">
           <RowsEditor
             name="galleryImages"
             defaultValue={gallery}
@@ -320,6 +329,7 @@ export default async function PortfolioDetailPage(props: {
 
         {/* Sección 5: Before/After */}
         <Section
+          id="before-after"
           title="Before / After"
           help="Parejas de imágenes para el slider comparativo del detalle."
         >
@@ -336,8 +346,7 @@ export default async function PortfolioDetailPage(props: {
           />
         </Section>
 
-        {/* Sección 6: Créditos */}
-        <Section title="Créditos" help="Equipo que trabajó en el proyecto.">
+        <Section id="creditos" title="Créditos" help="Equipo que trabajó en el proyecto.">
           <RowsEditor
             name="credits"
             defaultValue={credits}
@@ -350,8 +359,7 @@ export default async function PortfolioDetailPage(props: {
           />
         </Section>
 
-        {/* Sección 7: Publicación */}
-        <Section title="Publicación">
+        <Section id="publicacion" title="Publicación">
           <div className="flex flex-wrap items-end gap-4">
             <Field label="Orden">
               <Input
@@ -374,7 +382,8 @@ export default async function PortfolioDetailPage(props: {
 
           <FormActions cancelHref="/cms/portfolio" submitLabel="Guardar cambios" />
         </form>
-      </LivePreview>
+        </LivePreview>
+      </div>
     </div>
   );
 }

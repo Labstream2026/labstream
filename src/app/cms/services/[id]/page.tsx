@@ -8,7 +8,14 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
-import { Section, Field, Input, Textarea, FormActions, EditorToolbar, FormShortcuts } from "@/components/cms/form";
+import { Section, Field, Input, Textarea, FormActions, EditorToolbar, FormShortcuts, SectionNav } from "@/components/cms/form";
+
+const SERVICE_SECTIONS = [
+  { id: "hero", label: "Hero" },
+  { id: "capacidades", label: "Capacidades" },
+  { id: "proceso", label: "Proceso" },
+  { id: "pricing", label: "Pricing" },
+];
 
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
@@ -136,11 +143,14 @@ export default async function ServiceDetailPage(props: {
         </p>
       </div>
 
-      <LivePreview
-        model="service"
-        recordId={svc.id}
-        previewPath={`/servicio/${svc.slug}`}
-      >
+      <div className="lg:grid lg:grid-cols-[180px_1fr] lg:gap-8">
+        <SectionNav sections={SERVICE_SECTIONS} />
+
+        <LivePreview
+          model="service"
+          recordId={svc.id}
+          previewPath={`/servicio/${svc.slug}`}
+        >
         <form
           action={saveServiceDetail}
           className="lg flex flex-col gap-6 rounded-2xl p-6 md:p-8"
@@ -148,7 +158,7 @@ export default async function ServiceDetailPage(props: {
           <input type="hidden" name="id" value={svc.id} />
           <FormShortcuts />
 
-        <Section title="Hero del detalle">
+        <Section id="hero" title="Hero del detalle">
           <ImageField
             name="heroImageUrl"
             label="Imagen de fondo del hero"
@@ -169,6 +179,7 @@ export default async function ServiceDetailPage(props: {
         </Section>
 
         <Section
+          id="capacidades"
           title="Capacidades"
           help="Bloques que aparecen en el grid 'Capacidades' del detalle."
         >
@@ -192,6 +203,7 @@ export default async function ServiceDetailPage(props: {
         </Section>
 
         <Section
+          id="proceso"
           title="Proceso"
           help="Pasos numerados que aparecen como tarjetas en orden."
         >
@@ -214,7 +226,7 @@ export default async function ServiceDetailPage(props: {
           />
         </Section>
 
-        <Section title="Pricing">
+        <Section id="pricing" title="Pricing">
           <Field
             label="Texto de inversión"
             help="Aparece como CTA al final del detalle"
@@ -229,7 +241,8 @@ export default async function ServiceDetailPage(props: {
 
           <FormActions cancelHref="/cms/services" submitLabel="Guardar" />
         </form>
-      </LivePreview>
+        </LivePreview>
+      </div>
     </div>
   );
 }

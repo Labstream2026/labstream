@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 export { FormShortcuts } from "./FormShortcuts";
+export { SectionNav } from "./SectionNav";
 
 // ─── Page header ────────────────────────────────────────────────────
 
