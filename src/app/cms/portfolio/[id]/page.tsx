@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioCategory, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { portfolioSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -36,59 +37,6 @@ type GalleryImg = { url: string; alt?: string; caption?: string };
 type BeforeAfter = { before: string; after: string; label?: string };
 type Credit = { role: string; name: string };
 
-function parseGalleryJson(raw: string): GalleryImg[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((r) => r && typeof r === "object")
-      .map((r) => ({
-        url: String(r.url ?? "").trim(),
-        alt: String(r.alt ?? "").trim() || undefined,
-        caption: String(r.caption ?? "").trim() || undefined,
-      }))
-      .filter((g) => g.url);
-  } catch {
-    return [];
-  }
-}
-
-function parseBeforeAfterJson(raw: string): BeforeAfter[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((r) => r && typeof r === "object")
-      .map((r) => ({
-        before: String(r.before ?? "").trim(),
-        after: String(r.after ?? "").trim(),
-        label: String(r.label ?? "").trim() || undefined,
-      }))
-      .filter((b) => b.before && b.after);
-  } catch {
-    return [];
-  }
-}
-
-function parseCreditsJson(raw: string): Credit[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((r) => r && typeof r === "object")
-      .map((r) => ({
-        role: String(r.role ?? "").trim(),
-        name: String(r.name ?? "").trim(),
-      }))
-      .filter((c) => c.role && c.name);
-  } catch {
-    return [];
-  }
-}
-
 async function saveProject(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -98,96 +46,60 @@ async function saveProject(formData: FormData) {
   }
 
   const id = String(formData.get("id") ?? "");
-  const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const client = String(formData.get("client") ?? "").trim() || null;
-  const category = String(formData.get("category") ?? "COMERCIAL") as PortfolioCategory;
-  const yearRaw = parseInt(String(formData.get("year") ?? ""), 10);
-  const year = Number.isFinite(yearRaw) ? yearRaw : new Date().getFullYear();
-  const excerpt = String(formData.get("excerpt") ?? "").trim() || null;
-  const brief = String(formData.get("brief") ?? "").trim() || null;
-  const process = String(formData.get("process") ?? "").trim() || null;
-  const result = String(formData.get("result") ?? "").trim() || null;
-  const coverImageUrl =
-    String(formData.get("coverImageUrl") ?? "").trim() || null;
-  const videoUrl = String(formData.get("videoUrl") ?? "").trim() || null;
-
-  const galleryArr = parseGalleryJson(
-    String(formData.get("galleryImages") ?? "").trim(),
-  );
-  const gallery =
-    galleryArr.length > 0
-      ? (galleryArr as unknown as Prisma.InputJsonValue)
-      : Prisma.JsonNull;
-
-  const baArr = parseBeforeAfterJson(
-    String(formData.get("beforeAfter") ?? "").trim(),
-  );
-  const beforeAfter =
-    baArr.length > 0
-      ? (baArr as unknown as Prisma.InputJsonValue)
-      : Prisma.JsonNull;
-
-  const creditsArr = parseCreditsJson(
-    String(formData.get("credits") ?? "").trim(),
-  );
-  const credits =
-    creditsArr.length > 0
-      ? (creditsArr as unknown as Prisma.InputJsonValue)
-      : Prisma.JsonNull;
-
-  const tagsRaw = String(formData.get("tags") ?? "").trim();
-  const tags = tagsRaw
-    ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
-    : [];
-
-  const featured = formData.get("featured") === "on";
-  const orderRaw = parseInt(String(formData.get("order") ?? "0"), 10);
-  const order = Number.isFinite(orderRaw) ? orderRaw : 0;
-
-  if (!title || !slug) {
-    await setError("Faltan campos obligatorios: título y slug.");
+  const parsed = parseForm(portfolioSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
     redirect(`/cms/portfolio/${id}`);
   }
+  const data = parsed.data;
 
   const exists = await prisma.portfolioProject.findFirst({
-    where: { slug, NOT: { id } },
+    where: { slug: data.slug, NOT: { id } },
   });
   if (exists) {
-    await setError(`Ya existe un proyecto con el slug "${slug}".`);
+    await setError(`Ya existe un proyecto con el slug "${data.slug}".`);
     redirect(`/cms/portfolio/${id}`);
   }
+
+  const gallery =
+    data.galleryImages.length > 0
+      ? (data.galleryImages as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
+  const beforeAfter =
+    data.beforeAfter.length > 0
+      ? (data.beforeAfter as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
+  const credits =
+    data.credits.length > 0
+      ? (data.credits as unknown as Prisma.InputJsonValue)
+      : Prisma.JsonNull;
 
   await prisma.portfolioProject.update({
     where: { id },
     data: {
-      title,
-      slug,
-      client,
-      category,
-      year,
-      excerpt,
-      brief,
-      process,
-      result,
-      coverImageUrl,
-      videoUrl,
+      title: data.title,
+      slug: data.slug,
+      client: data.client,
+      category: data.category,
+      year: data.year,
+      excerpt: data.excerpt,
+      brief: data.brief,
+      process: data.process,
+      result: data.result,
+      coverImageUrl: data.coverImageUrl,
+      videoUrl: data.videoUrl,
       galleryImages: gallery,
       beforeAfter,
       credits,
-      tags,
-      featured,
-      order,
+      tags: data.tags,
+      featured: data.featured,
+      order: data.order,
       draft: Prisma.JsonNull,
     },
   });
 
   revalidatePath("/portafolio");
-  revalidatePath(`/portafolio/${slug}`);
+  revalidatePath(`/portafolio/${data.slug}`);
   revalidatePath("/cms/portfolio");
   await setSuccess("Cambios guardados.");
   redirect(`/cms/portfolio/${id}`);

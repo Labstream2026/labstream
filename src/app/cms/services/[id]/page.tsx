@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { serviceDetailSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -20,33 +21,6 @@ const SERVICE_SECTIONS = [
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
 
-function parseRowsJson<T extends Record<string, string>>(
-  raw: string,
-  defaults: Record<keyof T, string>,
-  required: keyof T,
-): T[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((r) => r && typeof r === "object")
-      .map((r) => {
-        const out = {} as T;
-        for (const k in defaults) {
-          out[k] = (String(r[k] ?? defaults[k]).trim() || defaults[k]) as T[Extract<
-            keyof T,
-            string
-          >];
-        }
-        return out;
-      })
-      .filter((r) => String(r[required]).trim());
-  } catch {
-    return [];
-  }
-}
-
 async function saveServiceDetail(formData: FormData) {
   "use server";
   const me = await requireCmsUser();
@@ -56,30 +30,20 @@ async function saveServiceDetail(formData: FormData) {
   }
 
   const id = String(formData.get("id") ?? "");
-  const longDescription =
-    String(formData.get("longDescription") ?? "").trim() || null;
-  const heroImageUrl =
-    String(formData.get("heroImageUrl") ?? "").trim() || null;
-  const pricing = String(formData.get("pricing") ?? "").trim() || null;
+  const parsed = parseForm(serviceDetailSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
+    redirect(`/cms/services/${id}`);
+  }
+  const data = parsed.data;
 
-  const capArr = parseRowsJson<Capability>(
-    String(formData.get("capabilities") ?? "").trim(),
-    { icon: "•", title: "", desc: "" },
-    "title",
-  );
   const capabilities =
-    capArr.length > 0
-      ? (capArr as unknown as Prisma.InputJsonValue)
+    data.capabilities.length > 0
+      ? (data.capabilities as unknown as Prisma.InputJsonValue)
       : Prisma.JsonNull;
-
-  const procArr = parseRowsJson<ProcessStep>(
-    String(formData.get("process") ?? "").trim(),
-    { step: "", title: "", desc: "" },
-    "title",
-  );
   const process =
-    procArr.length > 0
-      ? (procArr as unknown as Prisma.InputJsonValue)
+    data.process.length > 0
+      ? (data.process as unknown as Prisma.InputJsonValue)
       : Prisma.JsonNull;
 
   const svc = await prisma.service.findUnique({ where: { id } });
@@ -91,9 +55,9 @@ async function saveServiceDetail(formData: FormData) {
   await prisma.service.update({
     where: { id },
     data: {
-      longDescription,
-      heroImageUrl,
-      pricing,
+      longDescription: data.longDescription,
+      heroImageUrl: data.heroImageUrl,
+      pricing: data.pricing,
       capabilities,
       process,
       draft: Prisma.JsonNull,

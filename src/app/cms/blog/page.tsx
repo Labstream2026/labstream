@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { BlogPostStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { blogCreateSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
@@ -16,31 +17,25 @@ async function createPost(formData: FormData) {
     redirect("/cms/blog");
   }
 
-  const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const category = String(formData.get("category") ?? "").trim() || null;
-
-  if (!title || !slug) {
-    await setError("Faltan campos obligatorios.");
+  const parsed = parseForm(blogCreateSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
     redirect("/cms/blog");
   }
+  const data = parsed.data;
 
-  const exists = await prisma.blogPost.findUnique({ where: { slug } });
+  const exists = await prisma.blogPost.findUnique({ where: { slug: data.slug } });
   if (exists) {
-    await setError(`Ya existe un post con el slug "${slug}".`);
+    await setError(`Ya existe un post con el slug "${data.slug}".`);
     redirect("/cms/blog");
   }
 
   const created = await prisma.blogPost.create({
     data: {
-      slug,
-      title,
+      slug: data.slug,
+      title: data.title,
       content: "",
-      category,
+      category: data.category,
       status: BlogPostStatus.DRAFT,
     },
   });

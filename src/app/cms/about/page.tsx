@@ -3,30 +3,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { aboutSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { Prisma } from "@prisma/client";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
 import { Field, Input, Textarea, PageHeader, FormShortcuts } from "@/components/cms/form";
 
 type ValueItem = { icon: string; title: string; desc: string };
-
-function parseValuesJson(raw: string): ValueItem[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter((r) => r && typeof r === "object")
-      .map((r) => ({
-        icon: String(r.icon ?? "").trim() || "•",
-        title: String(r.title ?? "").trim(),
-        desc: String(r.desc ?? "").trim(),
-      }))
-      .filter((r) => r.title);
-  } catch {
-    return [];
-  }
-}
 
 async function saveAbout(formData: FormData) {
   "use server";
@@ -36,41 +19,38 @@ async function saveAbout(formData: FormData) {
     redirect("/cms/about");
   }
 
-  const heroEyebrow =
-    String(formData.get("heroEyebrow") ?? "").trim() || null;
-  const heroTitle = String(formData.get("heroTitle") ?? "").trim() || null;
-  const heroSubtitle =
-    String(formData.get("heroSubtitle") ?? "").trim() || null;
-  const story = String(formData.get("story") ?? "").trim() || null;
-  const mission = String(formData.get("mission") ?? "").trim() || null;
-  const vision = String(formData.get("vision") ?? "").trim() || null;
-  const valuesRaw = String(formData.get("values") ?? "").trim();
-  const valuesArr = parseValuesJson(valuesRaw);
+  const parsed = parseForm(aboutSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
+    redirect("/cms/about");
+  }
+  const data = parsed.data;
+
   const values =
-    valuesArr.length > 0
-      ? (valuesArr as unknown as Prisma.InputJsonValue)
+    data.values.length > 0
+      ? (data.values as unknown as Prisma.InputJsonValue)
       : Prisma.JsonNull;
 
   await prisma.aboutContent.upsert({
     where: { id: "singleton" },
     update: {
-      heroEyebrow,
-      heroTitle,
-      heroSubtitle,
-      story,
-      mission,
-      vision,
+      heroEyebrow: data.heroEyebrow,
+      heroTitle: data.heroTitle,
+      heroSubtitle: data.heroSubtitle,
+      story: data.story,
+      mission: data.mission,
+      vision: data.vision,
       values,
       draft: Prisma.JsonNull,
     },
     create: {
       id: "singleton",
-      heroEyebrow,
-      heroTitle,
-      heroSubtitle,
-      story,
-      mission,
-      vision,
+      heroEyebrow: data.heroEyebrow,
+      heroTitle: data.heroTitle,
+      heroSubtitle: data.heroSubtitle,
+      story: data.story,
+      mission: data.mission,
+      vision: data.vision,
       values,
     },
   });

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioCategory } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { portfolioCreateSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
@@ -28,25 +29,16 @@ async function createProject(formData: FormData) {
     redirect("/cms/portfolio");
   }
 
-  const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const yearRaw = parseInt(String(formData.get("year") ?? ""), 10);
-  const year = Number.isFinite(yearRaw) ? yearRaw : new Date().getFullYear();
-  const category = String(formData.get("category") ?? "COMERCIAL") as PortfolioCategory;
-  const client = String(formData.get("client") ?? "").trim() || null;
-
-  if (!title || !slug) {
-    await setError("Faltan campos obligatorios: título y slug.");
+  const parsed = parseForm(portfolioCreateSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
     redirect("/cms/portfolio");
   }
+  const data = parsed.data;
 
-  const exists = await prisma.portfolioProject.findUnique({ where: { slug } });
+  const exists = await prisma.portfolioProject.findUnique({ where: { slug: data.slug } });
   if (exists) {
-    await setError(`Ya existe un proyecto con el slug "${slug}".`);
+    await setError(`Ya existe un proyecto con el slug "${data.slug}".`);
     redirect("/cms/portfolio");
   }
 
@@ -57,11 +49,11 @@ async function createProject(formData: FormData) {
 
   const created = await prisma.portfolioProject.create({
     data: {
-      slug,
-      title,
-      year,
-      category,
-      client,
+      slug: data.slug,
+      title: data.title,
+      year: data.year,
+      category: data.category,
+      client: data.client,
       order: (top?.order ?? -1) + 1,
       publishedAt: new Date(),
     },

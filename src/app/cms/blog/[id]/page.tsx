@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { BlogPostStatus, Prisma } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { blogSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
@@ -27,68 +28,47 @@ async function savePost(formData: FormData) {
   }
 
   const id = String(formData.get("id") ?? "");
-  const title = String(formData.get("title") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const excerpt = String(formData.get("excerpt") ?? "").trim() || null;
-  const content = String(formData.get("content") ?? "");
-  const coverImageUrl =
-    String(formData.get("coverImageUrl") ?? "").trim() || null;
-  const authorName = String(formData.get("authorName") ?? "").trim() || null;
-  const authorRole = String(formData.get("authorRole") ?? "").trim() || null;
-  const category = String(formData.get("category") ?? "").trim() || null;
-  const tagsRaw = String(formData.get("tags") ?? "").trim();
-  const tags = tagsRaw
-    ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
-    : [];
-  const status = formData.get("status") === "PUBLISHED"
-    ? BlogPostStatus.PUBLISHED
-    : BlogPostStatus.DRAFT;
-  const readMinutesRaw = parseInt(String(formData.get("readMinutes") ?? ""), 10);
-  const readMinutes = Number.isFinite(readMinutesRaw) ? readMinutesRaw : null;
-
-  if (!title || !slug) {
-    await setError("Faltan campos obligatorios: título y slug.");
+  const parsed = parseForm(blogSchema, formData);
+  if (!parsed.ok) {
+    await setError(summarizeErrors(parsed.errors), parsed.errors);
     redirect(`/cms/blog/${id}`);
   }
+  const data = parsed.data;
 
   const exists = await prisma.blogPost.findFirst({
-    where: { slug, NOT: { id } },
+    where: { slug: data.slug, NOT: { id } },
   });
   if (exists) {
-    await setError(`Ya existe un post con el slug "${slug}".`);
+    await setError(`Ya existe un post con el slug "${data.slug}".`);
     redirect(`/cms/blog/${id}`);
   }
 
   const current = await prisma.blogPost.findUnique({ where: { id } });
   const justPublished =
     current?.status !== BlogPostStatus.PUBLISHED &&
-    status === BlogPostStatus.PUBLISHED;
+    data.status === BlogPostStatus.PUBLISHED;
 
   await prisma.blogPost.update({
     where: { id },
     data: {
-      title,
-      slug,
-      excerpt,
-      content,
-      coverImageUrl,
-      authorName,
-      authorRole,
-      category,
-      tags,
-      status,
-      readMinutes,
+      title: data.title,
+      slug: data.slug,
+      excerpt: data.excerpt,
+      content: data.content,
+      coverImageUrl: data.coverImageUrl,
+      authorName: data.authorName,
+      authorRole: data.authorRole,
+      category: data.category,
+      tags: data.tags,
+      status: data.status,
+      readMinutes: data.readMinutes,
       draft: Prisma.JsonNull,
       ...(justPublished ? { publishedAt: new Date() } : {}),
     },
   });
 
   revalidatePath("/blog");
-  revalidatePath(`/blog/${slug}`);
+  revalidatePath(`/blog/${data.slug}`);
   revalidatePath("/cms/blog");
   await setSuccess("Cambios guardados.");
   redirect(`/cms/blog/${id}`);
