@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { LeadStatus } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { EditorToolbar, Select } from "@/components/cms/form";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Nuevo",
@@ -76,14 +77,7 @@ export default async function LeadDetailPage(props: {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-6">
-        <Link
-          href="/cms/leads"
-          className="text-[12px] text-white/55 hover:text-white"
-        >
-          ← Volver a mensajes
-        </Link>
-      </div>
+      <EditorToolbar backHref="/cms/leads" backLabel="Volver a mensajes" />
 
       <div className="mb-6">
         <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
@@ -141,17 +135,17 @@ export default async function LeadDetailPage(props: {
           <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
             Estado
           </span>
-          <select
+          <Select
             name="status"
             defaultValue={lead.status}
-            className="max-w-xs rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
+            className="max-w-xs"
           >
             {(Object.keys(STATUS_LABELS) as LeadStatus[]).map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABELS[s]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="flex flex-col gap-1.5">

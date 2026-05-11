@@ -9,6 +9,7 @@ import {
 } from "@/lib/cms-guard";
 import { setError } from "@/lib/cms-flash";
 import { PageStatus } from "@prisma/client";
+import { PageHeader, StatusBadge } from "@/components/cms/form";
 
 async function createPage(formData: FormData) {
   "use server";
@@ -64,19 +65,7 @@ export default async function PagesIndex() {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
-            Contenido
-          </div>
-          <h1
-            className="mt-1 font-heading text-white"
-            style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
-          >
-            Páginas
-          </h1>
-        </div>
-      </div>
+      <PageHeader eyebrow="Contenido" title="Páginas" />
 
       {access.all === false && pages.length === 0 && (
         <div className="lg rounded-2xl p-8 text-center text-[14px] text-white/55">
@@ -117,7 +106,7 @@ export default async function PagesIndex() {
                   <div className="text-[12px] text-white/45">/{p.slug}</div>
                 </td>
                 <td className="px-5 py-3">
-                  <StatusPill status={p.status} />
+                  <StatusBadge status={p.status} />
                 </td>
                 <td className="px-5 py-3 text-white/65">
                   {p._count.blocks}
@@ -186,20 +175,4 @@ export default async function PagesIndex() {
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    PUBLISHED: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0", label: "Publicado" },
-    DRAFT: { bg: "rgba(245,158,11,0.13)", color: "#FBC272", label: "Borrador" },
-    REVIEW: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF", label: "En revisión" },
-  };
-  const s = map[status] ?? map.DRAFT;
-  return (
-    <span
-      className="inline-block rounded-full px-2.5 py-1 text-[11px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {s.label}
-    </span>
-  );
-}
 

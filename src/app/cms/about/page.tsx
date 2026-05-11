@@ -6,6 +6,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { Prisma } from "@prisma/client";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
+import { Field, Input, Textarea, PageHeader } from "@/components/cms/form";
 
 type ValueItem = { icon: string; title: string; desc: string };
 
@@ -93,21 +94,11 @@ export default async function AboutPage() {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-8">
-        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
-          Web pública
-        </div>
-        <h1
-          className="mt-1 font-heading text-white"
-          style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
-        >
-          Acerca de
-        </h1>
-        <p className="mt-2 max-w-2xl text-[14px] text-white/55">
-          Contenido editorial de la página /nosotros — historia, misión, visión
-          y valores.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Web pública"
+        title="Acerca de"
+        subtitle="Contenido editorial de la página /nosotros — historia, misión, visión y valores."
+      />
 
       <LivePreview
         model="about"
@@ -116,66 +107,61 @@ export default async function AboutPage() {
       >
         <form action={saveAbout} className="lg flex flex-col gap-5 rounded-2xl p-6 md:p-8">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Labeled
+          <Field
             label="Eyebrow"
             help="Texto pequeño arriba del título (ej: 'Quiénes somos')"
           >
-            <input
+            <Input
               name="heroEyebrow"
               defaultValue={about.heroEyebrow ?? ""}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
-          </Labeled>
-          <Labeled label="Título hero" help="El título italic principal" wide>
+          </Field>
+          <Field label="Título hero" help="El título italic principal" wide>
             <input
               name="heroTitle"
               defaultValue={about.heroTitle ?? ""}
               className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[14px] text-white focus:border-orange/50 focus:outline-none"
             />
-          </Labeled>
+          </Field>
         </div>
 
-        <Labeled label="Subtítulo" help="Párrafo que aparece debajo del título">
-          <textarea
+        <Field label="Subtítulo" help="Párrafo que aparece debajo del título">
+          <Textarea
             name="heroSubtitle"
             defaultValue={about.heroSubtitle ?? ""}
             rows={2}
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
           />
-        </Labeled>
+        </Field>
 
-        <Labeled
+        <Field
           label="Historia"
           help="Múltiples párrafos. Separa con líneas en blanco."
         >
-          <textarea
+          <Textarea
             name="story"
             defaultValue={about.story ?? ""}
             rows={8}
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] leading-relaxed text-white focus:border-orange/50 focus:outline-none"
           />
-        </Labeled>
+        </Field>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Labeled label="Misión">
-            <textarea
+          <Field label="Misión">
+            <Textarea
               name="mission"
               defaultValue={about.mission ?? ""}
               rows={3}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
-          </Labeled>
-          <Labeled label="Visión">
-            <textarea
+          </Field>
+          <Field label="Visión">
+            <Textarea
               name="vision"
               defaultValue={about.vision ?? ""}
               rows={3}
-              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
             />
-          </Labeled>
+          </Field>
         </div>
 
-        <Labeled label="Valores" help="Cada valor con icono, título y descripción.">
+        <Field label="Valores" help="Cada valor con icono, título y descripción.">
           <RowsEditor
             name="values"
             defaultValue={valuesArr}
@@ -193,7 +179,7 @@ export default async function AboutPage() {
               },
             ]}
           />
-        </Labeled>
+        </Field>
 
         <div className="flex justify-end">
           <button type="submit" className="btn-primary">
@@ -221,25 +207,4 @@ export default async function AboutPage() {
   );
 }
 
-function Labeled({
-  label,
-  help,
-  wide,
-  children,
-}: {
-  label: string;
-  help?: string;
-  wide?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className={`flex flex-col gap-1.5 ${wide ? "md:col-span-2" : ""}`}>
-      <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-        {label}
-      </span>
-      {children}
-      {help && <span className="text-[11px] text-white/40">{help}</span>}
-    </label>
-  );
-}
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError } from "@/lib/cms-flash";
+import { PageHeader } from "@/components/cms/form";
 
 async function saveService(formData: FormData) {
   "use server";
@@ -83,17 +84,7 @@ export default async function ServicesPage() {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-8">
-        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
-          Catálogo
-        </div>
-        <h1
-          className="mt-1 font-heading text-white"
-          style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
-        >
-          Servicios
-        </h1>
-      </div>
+      <PageHeader eyebrow="Catálogo" title="Servicios" />
 
       <div className="flex flex-col gap-4">
         {services.map((s) => (

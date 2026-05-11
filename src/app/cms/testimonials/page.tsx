@@ -5,6 +5,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
+import { PageHeader } from "@/components/cms/form";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
@@ -140,20 +141,11 @@ export default async function TestimonialsPage() {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-8">
-        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
-          Web pública
-        </div>
-        <h1
-          className="mt-1 font-heading text-white"
-          style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
-        >
-          Testimonios
-        </h1>
-        <p className="mt-2 max-w-2xl text-[14px] text-white/55">
-          Lo que dicen los clientes. Aparecen en el carrusel de la home.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Web pública"
+        title="Testimonios"
+        subtitle="Lo que dicen los clientes. Aparecen en el carrusel de la home."
+      />
 
       {items.length === 0 ? (
         <div className="lg rounded-2xl p-6 text-center text-[14px] text-white/55">

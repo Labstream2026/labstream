@@ -8,6 +8,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
+import { Section, Field, Input, Textarea, FormActions, EditorToolbar } from "@/components/cms/form";
 
 type Capability = { icon: string; title: string; desc: string };
 type ProcessStep = { step: string; title: string; desc: string };
@@ -113,21 +114,11 @@ export default async function ServiceDetailPage(props: {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <Link
-          href="/cms/services"
-          className="text-[12px] text-white/55 hover:text-white"
-        >
-          ← Volver a servicios
-        </Link>
-        <Link
-          href={`/servicio/${svc.slug}`}
-          target="_blank"
-          className="text-[12px] text-orange hover:underline"
-        >
-          Ver en sitio público ↗
-        </Link>
-      </div>
+      <EditorToolbar
+        backHref="/cms/services"
+        backLabel="Volver a servicios"
+        publicHref={`/servicio/${svc.slug}`}
+      />
 
       <div className="mb-6">
         <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
@@ -164,7 +155,7 @@ export default async function ServiceDetailPage(props: {
             help="Imagen grande detrás del título"
             aspect="wide"
           />
-          <Labeled
+          <Field
             label="Descripción larga"
             help="Párrafo amplio bajo el título del hero (2-4 líneas)"
           >
@@ -173,7 +164,7 @@ export default async function ServiceDetailPage(props: {
               defaultValue={svc.longDescription ?? ""}
               rows={4}
             />
-          </Labeled>
+          </Field>
         </Section>
 
         <Section
@@ -223,7 +214,7 @@ export default async function ServiceDetailPage(props: {
         </Section>
 
         <Section title="Pricing">
-          <Labeled
+          <Field
             label="Texto de inversión"
             help="Aparece como CTA al final del detalle"
           >
@@ -232,84 +223,14 @@ export default async function ServiceDetailPage(props: {
               defaultValue={svc.pricing ?? ""}
               placeholder="Desde $XXM COP — Cotización personalizada según alcance"
             />
-          </Labeled>
+          </Field>
         </Section>
 
-          <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
-            <Link
-              href="/cms/services"
-              className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
-            >
-              Cancelar
-            </Link>
-            <button type="submit" className="btn-primary">
-              Guardar
-            </button>
-          </div>
+          <FormActions cancelHref="/cms/services" submitLabel="Guardar" />
         </form>
       </LivePreview>
     </div>
   );
 }
 
-function Section({
-  title,
-  help,
-  children,
-}: {
-  title: string;
-  help?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-t border-white/5 pt-5 first:border-0 first:pt-0">
-      <div>
-        <div className="text-[14px] font-semibold text-white">{title}</div>
-        {help && <div className="mt-0.5 text-[12px] text-white/45">{help}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Labeled({
-  label,
-  help,
-  children,
-}: {
-  label: string;
-  help?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-        {label}
-      </span>
-      {children}
-      {help && <span className="text-[11px] text-white/40">{help}</span>}
-    </label>
-  );
-}
-
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none ${props.className ?? ""}`}
-    />
-  );
-}
-
-function Textarea({
-  mono,
-  ...rest
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { mono?: boolean }) {
-  return (
-    <textarea
-      {...rest}
-      className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] leading-relaxed text-white focus:border-orange/50 focus:outline-none ${mono ? "font-mono text-[12px]" : ""} ${rest.className ?? ""}`}
-    />
-  );
-}
 

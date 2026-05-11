@@ -8,6 +8,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
+import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar } from "@/components/cms/form";
 
 async function savePost(formData: FormData) {
   "use server";
@@ -96,23 +97,11 @@ export default async function BlogDetailPage(props: {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <Link
-          href="/cms/blog"
-          className="text-[12px] text-white/55 hover:text-white"
-        >
-          ← Volver al blog
-        </Link>
-        {post.status === BlogPostStatus.PUBLISHED && (
-          <Link
-            href={`/blog/${post.slug}`}
-            target="_blank"
-            className="text-[12px] text-orange hover:underline"
-          >
-            Ver en sitio público ↗
-          </Link>
-        )}
-      </div>
+      <EditorToolbar
+        backHref="/cms/blog"
+        backLabel="Volver al blog"
+        publicHref={post.status === BlogPostStatus.PUBLISHED ? `/blog/${post.slug}` : undefined}
+      />
 
       <div className="mb-6">
         <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
@@ -139,33 +128,33 @@ export default async function BlogDetailPage(props: {
 
         <Section title="Básicos">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Labeled label="Título" required>
+            <Field label="Título" required>
               <Input name="title" defaultValue={post.title} required />
-            </Labeled>
-            <Labeled label="Slug" help="solo minúsculas, números y guiones">
+            </Field>
+            <Field label="Slug" help="solo minúsculas, números y guiones">
               <Input name="slug" defaultValue={post.slug} required />
-            </Labeled>
-            <Labeled label="Categoría">
+            </Field>
+            <Field label="Categoría">
               <Input
                 name="category"
                 defaultValue={post.category ?? ""}
                 placeholder="Producción, IA, Industria…"
               />
-            </Labeled>
-            <Labeled label="Tags" help="separados por coma">
+            </Field>
+            <Field label="Tags" help="separados por coma">
               <Input
                 name="tags"
                 defaultValue={post.tags.join(", ")}
                 placeholder="ia, color, fotografía"
               />
-            </Labeled>
+            </Field>
           </div>
-          <Labeled
+          <Field
             label="Excerpt"
             help="2-3 líneas que aparecen en la card y como subtítulo del post"
           >
             <Textarea name="excerpt" defaultValue={post.excerpt ?? ""} rows={2} />
-          </Labeled>
+          </Field>
         </Section>
 
         <Section title="Imagen de portada">
@@ -185,32 +174,28 @@ export default async function BlogDetailPage(props: {
 
         <Section title="Autor">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Labeled label="Nombre">
+            <Field label="Nombre">
               <Input name="authorName" defaultValue={post.authorName ?? ""} />
-            </Labeled>
-            <Labeled label="Rol / cargo">
+            </Field>
+            <Field label="Rol / cargo">
               <Input
                 name="authorRole"
                 defaultValue={post.authorRole ?? ""}
                 placeholder="Director Creativo"
               />
-            </Labeled>
+            </Field>
           </div>
         </Section>
 
         <Section title="Publicación">
           <div className="flex flex-wrap items-end gap-5">
-            <Labeled label="Estado">
-              <select
-                name="status"
-                defaultValue={post.status}
-                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none"
-              >
+            <Field label="Estado">
+              <Select name="status" defaultValue={post.status}>
                 <option value="DRAFT">Borrador</option>
                 <option value="PUBLISHED">Publicado</option>
-              </select>
-            </Labeled>
-            <Labeled label="Min. de lectura">
+              </Select>
+            </Field>
+            <Field label="Min. de lectura">
               <Input
                 name="readMinutes"
                 type="number"
@@ -218,7 +203,7 @@ export default async function BlogDetailPage(props: {
                 placeholder="auto"
                 className="w-24"
               />
-            </Labeled>
+            </Field>
             {post.publishedAt && (
               <div className="pb-3 text-[12px] text-white/50">
                 Publicado:{" "}
@@ -230,84 +215,11 @@ export default async function BlogDetailPage(props: {
           </div>
         </Section>
 
-          <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
-            <Link
-              href="/cms/blog"
-              className="rounded-md border border-white/10 px-4 py-2.5 text-[13px] text-white/70 hover:bg-white/5"
-            >
-              Cancelar
-            </Link>
-            <button type="submit" className="btn-primary">
-              Guardar
-            </button>
-          </div>
+          <FormActions cancelHref="/cms/blog" submitLabel="Guardar" />
         </form>
       </LivePreview>
     </div>
   );
 }
 
-function Section({
-  title,
-  help,
-  children,
-}: {
-  title: string;
-  help?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-t border-white/5 pt-5 first:border-0 first:pt-0">
-      <div>
-        <div className="text-[14px] font-semibold text-white">{title}</div>
-        {help && <div className="mt-0.5 text-[12px] text-white/45">{help}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Labeled({
-  label,
-  help,
-  required,
-  children,
-}: {
-  label: string;
-  help?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-white/50">
-        {label}
-        {required && <span className="text-orange">*</span>}
-      </span>
-      {children}
-      {help && <span className="text-[11px] text-white/40">{help}</span>}
-    </label>
-  );
-}
-
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] text-white focus:border-orange/50 focus:outline-none ${props.className ?? ""}`}
-    />
-  );
-}
-
-function Textarea({
-  mono,
-  ...rest
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { mono?: boolean }) {
-  return (
-    <textarea
-      {...rest}
-      className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[13px] leading-relaxed text-white focus:border-orange/50 focus:outline-none ${mono ? "font-mono text-[12px]" : ""} ${rest.className ?? ""}`}
-    />
-  );
-}
 

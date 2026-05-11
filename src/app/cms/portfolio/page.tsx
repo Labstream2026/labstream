@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PortfolioCategory } from "@prisma/client";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
+import { PageHeader } from "@/components/cms/form";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -115,21 +116,11 @@ export default async function PortfolioListPage(props: {
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
-      <div className="mb-8">
-        <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
-          Web pública
-        </div>
-        <h1
-          className="mt-1 font-heading text-white"
-          style={{ fontSize: 38, lineHeight: 1.05, letterSpacing: "-1px" }}
-        >
-          Portafolio
-        </h1>
-        <p className="mt-2 max-w-2xl text-[14px] text-white/55">
-          Casos de estudio. El primero destacado aparece grande en el grid de
-          /portafolio.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Web pública"
+        title="Portafolio"
+        subtitle="Casos de estudio. El primero destacado aparece grande en el grid de /portafolio."
+      />
 
       {/* Búsqueda + filtros */}
       <form
