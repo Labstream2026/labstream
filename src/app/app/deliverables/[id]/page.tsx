@@ -32,6 +32,7 @@ import { EmbedKind } from "@prisma/client";
 import { ReviewLinksPanel, type ReviewLinkRow } from "@/components/review/ReviewLinksPanel";
 import { generateReviewSlug } from "@/lib/review";
 import { StatusPill } from "@/components/app/ui/StatusPill";
+import { Avatar } from "@/components/app/ui/Avatar";
 
 async function submitVersion(formData: FormData) {
   "use server";
@@ -545,7 +546,7 @@ export default async function DeliverableReviewPage(props: {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[200px]">
                 <div className="text-[11px] font-mono uppercase tracking-wider text-orange">
-                  // Tu turno
+                  {"// Tu turno"}
                 </div>
                 <div className="text-[14px] font-semibold text-white">
                   Revisa este material y aprueba o pide cambios
@@ -598,16 +599,23 @@ export default async function DeliverableReviewPage(props: {
             {selectedVersion && (
               <>
                 <div className="lg rounded-2xl p-5">
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-3 flex items-center gap-3">
+                    <Avatar
+                      name={selectedVersion.submittedBy.name ?? selectedVersion.submittedBy.email}
+                      email={selectedVersion.submittedBy.email}
+                      size="md"
+                    />
                     <div>
                       <div className="text-[11px] uppercase tracking-wider text-white/45">
                         Material v{selectedVersion.versionNumber}
                       </div>
                       <div className="text-[13px] text-white/85">
                         Subido por{" "}
-                        {selectedVersion.submittedBy.name ??
-                          selectedVersion.submittedBy.email}{" "}
-                        ·{" "}
+                        <span className="font-medium text-white">
+                          {selectedVersion.submittedBy.name ??
+                            selectedVersion.submittedBy.email}
+                        </span>
+                        {" · "}
                         {selectedVersion.submittedAt.toLocaleString("es-CO", {
                           day: "2-digit",
                           month: "short",
@@ -669,35 +677,45 @@ export default async function DeliverableReviewPage(props: {
                     </p>
                   ) : (
                     <ul className="mb-4 flex flex-col gap-3">
-                      {selectedVersion.comments.map((c) => (
-                        <li
-                          key={c.id}
-                          className="rounded-xl border border-white/5 px-4 py-3"
-                        >
-                          <div className="text-[12px] font-medium text-white">
-                            {c.author
-                              ? c.author.name ?? c.author.email
-                              : `${c.guestName ?? "Invitado"}`}
-                            {!c.author && (
-                              <span className="ml-1 text-[10px] font-normal text-orange/85">
-                                invitado
-                              </span>
-                            )}
-                            <span className="ml-1 text-[11px] font-normal text-white/40">
-                              ·{" "}
-                              {c.createdAt.toLocaleString("es-CO", {
-                                day: "2-digit",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-[13px] text-white/80">
-                            {c.body}
-                          </div>
-                        </li>
-                      ))}
+                      {selectedVersion.comments.map((c) => {
+                        const display = c.author
+                          ? c.author.name ?? c.author.email
+                          : c.guestName ?? "Invitado";
+                        return (
+                          <li
+                            key={c.id}
+                            className="flex gap-3 rounded-xl border border-white/5 px-4 py-3"
+                          >
+                            <Avatar
+                              name={display}
+                              email={c.author?.email}
+                              kind={c.author ? undefined : null}
+                              size="sm"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[12px] font-medium text-white">
+                                {display}
+                                {!c.author && (
+                                  <span className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300">
+                                    invitado
+                                  </span>
+                                )}
+                                <span className="ml-2 text-[11px] font-normal text-white/40">
+                                  {c.createdAt.toLocaleString("es-CO", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[13px] text-white/80">
+                                {c.body}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                   <form action={postComment} className="flex flex-col gap-2">

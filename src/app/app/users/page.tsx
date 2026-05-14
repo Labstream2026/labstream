@@ -19,6 +19,7 @@ import {
   creatableKinds,
   isMaster,
 } from "@/lib/app-guards";
+import { Avatar } from "@/components/app/ui/Avatar";
 
 const newUserSchema = z.object({
   email: z.string().email().max(160),
@@ -257,8 +258,18 @@ export default async function UsersPage(props: {
                 style={{ borderColor: "var(--border)" }}
               >
                 <td className="px-5 py-3">
-                  <div className="font-medium text-white">{u.name ?? "—"}</div>
-                  <div className="text-[12px] text-white/45">{u.email}</div>
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      name={u.name ?? u.email}
+                      email={u.email}
+                      kind={u.kind}
+                      size="md"
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-white">{u.name ?? "—"}</div>
+                      <div className="truncate text-[12px] text-white/45">{u.email}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-5 py-3">
                   {isAdmin ? (

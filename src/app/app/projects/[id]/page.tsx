@@ -20,6 +20,7 @@ import {
 } from "@/lib/app-guards";
 import { detectEmbedKind } from "@/lib/google-drive";
 import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
+import { Avatar } from "@/components/app/ui/Avatar";
 
 async function updateTaskStatus(formData: FormData) {
   "use server";
@@ -182,7 +183,7 @@ export default async function ProjectDetailPage(props: {
         clientOrg: true,
         producerOrg: true,
         members: {
-          include: { user: { select: { id: true, name: true, email: true } } },
+          include: { user: { select: { id: true, name: true, email: true, kind: true } } },
         },
         phases: {
           include: {
@@ -465,9 +466,15 @@ export default async function ProjectDetailPage(props: {
               {project.members.map((m) => (
                 <li
                   key={m.id}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-white/5 px-3 py-2"
+                  className="flex items-center gap-2.5 rounded-lg border border-white/5 px-2.5 py-2"
                 >
-                  <div className="min-w-0">
+                  <Avatar
+                    name={m.user.name ?? m.user.email}
+                    email={m.user.email}
+                    kind={m.user.kind}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-medium text-white">
                       {m.user.name ?? m.user.email}
                     </div>

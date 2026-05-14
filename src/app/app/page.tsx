@@ -13,6 +13,9 @@ import {
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
 import { thumbnailFromVersion } from "@/lib/thumbnails";
+import { getProjectStatsMap, type ProjectStats } from "@/lib/project-stats";
+import { Avatar, AvatarStack } from "@/components/app/ui/Avatar";
+import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
 
 export default async function AppDashboard() {
   const me = await requireAppUser();
@@ -60,6 +63,8 @@ async function ClientDashboard({
       take: 6,
     }),
   ]);
+
+  const stats = await getProjectStatsMap(projects.map((p) => p.id));
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -153,7 +158,12 @@ async function ClientDashboard({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} clientView />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              stats={stats.get(p.id)}
+              clientView
+            />
           ))}
         </div>
       )}
@@ -196,6 +206,7 @@ async function TeamDashboard({
     orderBy: { updatedAt: "desc" },
     take: 6,
   });
+  const teamStats = await getProjectStatsMap(projects.map((p) => p.id));
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -250,7 +261,7 @@ async function TeamDashboard({
                   </td>
                   <td className="px-5 py-3 text-white/70">{t.phase.name}</td>
                   <td className="px-5 py-3">
-                    <StatusPill status={t.status} />
+                    <UIStatusPill status={t.status} size="sm" />
                   </td>
                 </tr>
               ))}
@@ -264,7 +275,7 @@ async function TeamDashboard({
       </h2>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((p) => (
-          <ProjectCard key={p.id} project={p} />
+          <ProjectCard key={p.id} project={p} stats={teamStats.get(p.id)} />
         ))}
       </div>
     </div>
@@ -336,6 +347,8 @@ async function ProducerDashboard({
     }),
   ]);
 
+  const producerStats = await getProjectStatsMap(projects.map((p) => p.id));
+
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
       <div className="mb-8">
@@ -371,7 +384,12 @@ async function ProducerDashboard({
           </div>
           <div className="flex flex-col gap-3">
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} compact />
+              <ProjectCard
+                key={p.id}
+                project={p}
+                stats={producerStats.get(p.id)}
+                compact
+              />
             ))}
           </div>
         </section>
@@ -495,6 +513,7 @@ function StatCard({
 
 function ProjectCard({
   project,
+  stats,
   clientView,
   compact,
 }: {
@@ -507,15 +526,20 @@ function ProjectCard({
     clientOrg: { name: string };
     producerOrg: { name: string };
   };
+  stats?: ProjectStats;
   clientView?: boolean;
   compact?: boolean;
 }) {
+  const next = stats?.nextDeliverable ?? null;
+  const team = stats?.teamPreview ?? [];
+  const pct = stats?.progressPct ?? 0;
+
   return (
     <Link
       href={`/app/projects/${project.id}`}
-      className="lg block rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
+      className="lg group block overflow-hidden rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:bg-white/[0.07]"
     >
-      <div className="mb-2 flex items-start justify-between gap-3">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-mono tracking-wider text-white/45">
             {project.code}
@@ -524,48 +548,69 @@ function ProjectCard({
             {project.name}
           </div>
         </div>
-        <StatusPill status={project.status} />
+        <UIStatusPill status={project.status} size="sm" />
       </div>
+
       {!compact && (
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-white/55">
-          {!clientView && <span>Cliente: {project.clientOrg.name}</span>}
-          <span>Productora: {project.producerOrg.name}</span>
-          {project.dueDate && (
-            <span>
-              Entrega:{" "}
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px] text-white/55">
+          {!clientView && <span>Cliente: <span className="text-white/75">{project.clientOrg.name}</span></span>}
+          <span>Productora: <span className="text-white/75">{project.producerOrg.name}</span></span>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {stats && stats.deliverablesTotal > 0 && (
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between text-[10.5px] text-white/45">
+            <span>{stats.deliverablesApproved} de {stats.deliverablesTotal} aprobados</span>
+            <span className="font-medium text-white/70">{pct}%</span>
+          </div>
+          <div className="h-1 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${pct}%`,
+                background:
+                  pct === 100
+                    ? "linear-gradient(90deg, #34C759, #7DEEA0)"
+                    : pct >= 50
+                    ? "linear-gradient(90deg, #E8640C, #FFB57A)"
+                    : "linear-gradient(90deg, #7B61FF, #B6A4FF)",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Próximo entregable */}
+      {next && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-white/45">Próximo</span>
+          <span className="truncate text-[12px] font-medium text-white/85">{next.title}</span>
+          <span className="ml-auto">
+            <UIStatusPill status={next.status} size="sm" showIcon={false} />
+          </span>
+        </div>
+      )}
+
+      {/* Equipo + entrega */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        {team.length > 0 ? (
+          <AvatarStack people={team} size="xs" max={4} />
+        ) : (
+          <span className="text-[10.5px] text-white/35">Sin equipo asignado</span>
+        )}
+        {project.dueDate && (
+          <span className="text-[11px] text-white/55">
+            Entrega: <span className="text-white/85">
               {project.dueDate.toLocaleDateString("es-CO", {
                 day: "2-digit",
                 month: "short",
-                year: "numeric",
               })}
             </span>
-          )}
-        </div>
-      )}
+          </span>
+        )}
+      </div>
     </Link>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { bg: string; color: string }> = {
-    ACTIVE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-    DRAFT: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
-    ON_HOLD: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    COMPLETED: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" },
-    CANCELLED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
-    TODO: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" },
-    DOING: { bg: "rgba(123,97,255,0.13)", color: "#B6A4FF" },
-    REVIEW: { bg: "rgba(245,158,11,0.13)", color: "#FBC272" },
-    DONE: { bg: "rgba(34,197,94,0.13)", color: "#7DEEA0" },
-    BLOCKED: { bg: "rgba(239,68,68,0.13)", color: "#FCA5A5" },
-  };
-  const s = map[status] ?? { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" };
-  return (
-    <span
-      className="inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
-      style={{ background: s.bg, color: s.color }}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
   );
 }
