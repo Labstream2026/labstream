@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { getSiteSettings, buildGoogleFontsUrl } from "@/lib/site-settings";
 
+// Todo el sitio se sirve desde la base de datos (CMS). Forzamos render
+// dinámico para que `next build` no intente pre-renderizar páginas
+// consultando la BD — en el build de Docker no hay BD disponible.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSiteSettings();
   return {
