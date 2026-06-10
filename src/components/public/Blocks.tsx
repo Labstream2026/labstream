@@ -4,8 +4,6 @@ import { Hero } from "@/components/public/Hero";
 import { Carousel } from "@/components/public/Carousel";
 import { ArrowUpRight } from "@/components/Icons";
 import { youtubeOrVimeoEmbedUrl, type BlockType } from "@/lib/blocks";
-
-type Stats = { items: { value: string; label: string }[] };
 type RichText = {
   eyebrow?: string;
   heading?: string;

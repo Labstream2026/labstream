@@ -60,6 +60,7 @@ export function AppShell({ user, role, isMaster, signOut, children }: Props) {
   const pathname = usePathname();
   const items = NAV_BY_ROLE[role] ?? NAV_BY_ROLE.CLIENT;
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";

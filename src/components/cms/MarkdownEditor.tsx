@@ -193,17 +193,26 @@ function escapeHtml(s: string) {
     .replace(/'/g, "&#39;");
 }
 
+/** Solo permite http(s), mailto y rutas internas; neutraliza javascript:, data:, etc. */
+function safeHref(url: string): string {
+  const trimmed = url.trim();
+  if (/^(https?:|mailto:|\/)/i.test(trimmed)) return trimmed;
+  return "#";
+}
+
 function renderInline(s: string) {
   let out = escapeHtml(s);
   // ![alt](url)
   out = out.replace(
     /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" loading="lazy" referrerpolicy="no-referrer" />',
+    (_m, alt: string, url: string) =>
+      `<img src="${safeHref(url)}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />`,
   );
   // [text](url)
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
+    (_m, text: string, url: string) =>
+      `<a href="${safeHref(url)}" target="_blank" rel="noreferrer">${text}</a>`,
   );
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");

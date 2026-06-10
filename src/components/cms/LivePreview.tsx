@@ -87,6 +87,7 @@ export function LivePreview({
   }, [active, scheduleSave]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (active) void sendDraft();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);

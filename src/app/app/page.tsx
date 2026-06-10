@@ -9,12 +9,11 @@ import {
   requireAppUser,
   getPrimaryAppRole,
   listVisibleProjectIds,
-  STATUS_LABELS,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
 import { thumbnailFromVersion } from "@/lib/thumbnails";
 import { getProjectStatsMap, type ProjectStats } from "@/lib/project-stats";
-import { Avatar, AvatarStack } from "@/components/app/ui/Avatar";
+import { AvatarStack } from "@/components/app/ui/Avatar";
 import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
 
 export default async function AppDashboard() {
@@ -30,7 +29,6 @@ export default async function AppDashboard() {
 // ─── CLIENTE ─────────────────────────────────────────────────
 
 async function ClientDashboard({
-  userId,
   access,
   name,
 }: {
@@ -285,7 +283,6 @@ async function TeamDashboard({
 // ─── PRODUCER / MASTER ───────────────────────────────────────
 
 async function ProducerDashboard({
-  userId,
   access,
   name,
   isMaster,

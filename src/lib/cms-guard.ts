@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { CmsRole, UserKind } from "@prisma/client";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 
 /**
  * Tipos de usuario que pueden entrar al CMS.

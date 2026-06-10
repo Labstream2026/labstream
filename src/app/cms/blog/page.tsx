@@ -149,12 +149,12 @@ export default async function BlogListPage(props: {
           Buscar
         </button>
         {(q || cat || sp.status) && (
-          <a
+          <Link
             href="/cms/blog"
             className="rounded-md px-3 py-2 text-[12px] text-white/55 hover:text-white"
           >
             Limpiar
-          </a>
+          </Link>
         )}
       </form>
 
@@ -199,9 +199,9 @@ export default async function BlogListPage(props: {
       {posts.length === 0 && (q || cat || sp.status) && (
         <div className="mb-5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-[13px] text-white/55">
           No hay resultados.{" "}
-          <a href="/cms/blog" className="text-orange hover:underline">
+          <Link href="/cms/blog" className="text-orange hover:underline">
             Limpiar filtros
-          </a>
+          </Link>
         </div>
       )}
 

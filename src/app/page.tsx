@@ -95,7 +95,7 @@ export default async function HomePage() {
           <ScrollReveal>
             <div className="mb-14 text-center">
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Servicios
+                {"// Servicios"}
               </p>
               <h2
                 className="font-heading text-white"
@@ -164,7 +164,7 @@ export default async function HomePage() {
             <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                  // Trabajos destacados
+                  {"// Trabajos destacados"}
                 </p>
                 <h2
                   className="font-heading text-white"
@@ -245,7 +245,7 @@ export default async function HomePage() {
           <ScrollReveal>
             <div className="mb-14 text-center">
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Proceso
+                {"// Proceso"}
               </p>
               <h2
                 className="font-heading text-white"
@@ -300,7 +300,7 @@ export default async function HomePage() {
               <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                    // Blog
+                    {"// Blog"}
                   </p>
                   <h2
                     className="font-heading text-white"
@@ -371,7 +371,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl text-center">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              // ¿Empezamos?
+              {"// ¿Empezamos?"}
             </p>
             <h2
               className="font-heading italic text-white"

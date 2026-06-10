@@ -47,7 +47,7 @@ export async function Footer() {
           <div className="grid items-center gap-6 md:grid-cols-[1fr_auto]">
             <div>
               <p className="mb-2 text-[12px] font-mono tracking-widest text-orange">
-                // Newsletter
+                {"// Newsletter"}
               </p>
               <h3
                 className="mb-2 font-heading italic text-white"

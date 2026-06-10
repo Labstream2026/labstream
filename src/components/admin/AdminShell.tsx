@@ -20,6 +20,7 @@ export function AdminShell({ user, signOut, children }: Props) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
   }, [pathname]);
 

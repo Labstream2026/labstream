@@ -62,7 +62,7 @@ export default async function BlogPage(props: {
         <div className="relative mx-auto max-w-6xl px-6">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              // Blog
+              {"// Blog"}
             </p>
             <h1
               className="font-heading italic text-white"

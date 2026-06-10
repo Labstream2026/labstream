@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight } from "@/components/Icons";
 
@@ -81,9 +82,9 @@ ${data.message}`,
         </h3>
         <p className="mb-6 text-[14px] text-white/70">
           Te contactaremos en menos de 24 horas. Mientras, puedes ver nuestro{" "}
-          <a href="/portafolio" className="text-orange hover:underline">
+          <Link href="/portafolio" className="text-orange hover:underline">
             portafolio
-          </a>
+          </Link>
           .
         </p>
       </motion.div>

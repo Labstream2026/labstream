@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rate-limit";
 import type { CmsRole, UserKind } from "@prisma/client";
 
 const credentialsSchema = z.object({
@@ -25,8 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(rawCreds);
         if (!parsed.success) return null;
 
+        const email = parsed.data.email.toLowerCase();
+        // Anti fuerza-bruta: 10 intentos / 5 min por email.
+        if (!rateLimit(`login:${email}`, 10, 5 * 60_000)) return null;
+
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
+          where: { email },
         });
         if (!user || !user.active) return null;
 

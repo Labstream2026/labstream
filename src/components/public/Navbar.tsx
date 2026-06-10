@@ -38,11 +38,6 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
-    setSvcOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
@@ -81,9 +76,21 @@ export function Navbar() {
                   className="relative"
                   onMouseEnter={() => setSvcOpen(true)}
                   onMouseLeave={() => setSvcOpen(false)}
+                  onFocus={() => setSvcOpen(true)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setSvcOpen(false);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setSvcOpen(false);
+                  }}
                 >
                   <Link
                     href={item.href}
+                    aria-haspopup="menu"
+                    aria-expanded={svcOpen}
+                    onClick={() => setSvcOpen(false)}
                     className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
                       isActive(item.href)
                         ? "text-orange"
@@ -109,6 +116,8 @@ export function Navbar() {
                   </Link>
                   {svcOpen && (
                     <div
+                      role="menu"
+                      aria-label="Servicios"
                       className="lg absolute left-1/2 top-[calc(100%+10px)] -translate-x-1/2 overflow-hidden rounded-2xl py-2"
                       style={{
                         minWidth: 260,
@@ -118,7 +127,9 @@ export function Navbar() {
                     >
                       <Link
                         href="/servicios"
-                        className="flex items-center gap-3 border-l-2 border-orange px-5 py-[11px] text-[12px] font-semibold text-white hover:bg-white/5"
+                        role="menuitem"
+                        onClick={() => setSvcOpen(false)}
+                        className="flex items-center gap-3 border-l-2 border-orange px-5 py-[11px] text-[12px] font-semibold text-white hover:bg-white/5 focus-visible:bg-white/10 focus-visible:outline-none"
                       >
                         Ver todos los servicios →
                       </Link>
@@ -127,7 +138,9 @@ export function Navbar() {
                         <Link
                           key={s.id}
                           href={`/servicio/${s.id}`}
-                          className="flex items-center gap-3 border-l-2 border-transparent px-5 py-[10px] text-[12px] font-medium text-white/65 transition-all hover:border-l-orange hover:bg-white/5 hover:text-white"
+                          role="menuitem"
+                          onClick={() => setSvcOpen(false)}
+                          className="flex items-center gap-3 border-l-2 border-transparent px-5 py-[10px] text-[12px] font-medium text-white/65 transition-all hover:border-l-orange hover:bg-white/5 hover:text-white focus-visible:border-l-orange focus-visible:bg-white/10 focus-visible:text-white focus-visible:outline-none"
                         >
                           <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full bg-orange/50" />
                           {s.label}
@@ -242,7 +255,10 @@ export function Navbar() {
             </button>
           </div>
 
-          <nav className="flex flex-1 flex-col overflow-y-auto px-5 py-6">
+          <nav
+            className="flex flex-1 flex-col overflow-y-auto px-5 py-6"
+            onClick={() => setMobileOpen(false)}
+          >
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.id}
@@ -278,6 +294,7 @@ export function Navbar() {
           <div
             className="flex flex-col gap-3 border-t p-5"
             style={{ borderColor: "rgba(255,255,255,0.08)" }}
+            onClick={() => setMobileOpen(false)}
           >
             <Link
               href="/contacto"

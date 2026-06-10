@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AssetSource } from "@prisma/client";
+import { canAccessCms } from "@/lib/cms-guard";
 import { detectEmbedKind, driveImageThumbnailUrl } from "@/lib/google-drive";
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ ok: false }, { status: 401 });
+  }
+  if (!canAccessCms(session.user.kind)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
   const url = new URL(req.url);
@@ -54,6 +58,9 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ ok: false }, { status: 401 });
+  }
+  if (!canAccessCms(session.user.kind)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
   const body = (await req.json()) as { url?: string; alt?: string };

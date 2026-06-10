@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isReviewLinkActive, isValidAnnotation } from "@/lib/review";
 import { sendEmail, escapeHtml } from "@/lib/email";
+import { canViewProject } from "@/lib/app-guards";
 
 const annotationsSchema = z.array(z.unknown()).max(50);
 
@@ -290,8 +291,18 @@ export async function PATCH(
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
-  const link = await prisma.reviewLink.findUnique({ where: { slug } });
+  const link = await prisma.reviewLink.findUnique({
+    where: { slug },
+    include: { version: { include: { deliverable: { select: { projectId: true } } } } },
+  });
   if (!link) return NextResponse.json({ error: "not_found" }, { status: 404 });
+
+  // El usuario debe tener acceso al proyecto para resolver comentarios.
+  const projectId = link.version.deliverable.projectId;
+  const canView = await canViewProject(session.user.id, session.user.role, projectId);
+  if (!canView) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);

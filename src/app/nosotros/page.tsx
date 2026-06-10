@@ -56,7 +56,7 @@ export default async function NosotrosPage(props: {
         <div className="relative mx-auto max-w-5xl">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              // {about?.heroEyebrow ?? "Nosotros"}
+              {"// "}{about?.heroEyebrow ?? "Nosotros"}
             </p>
             <h1
               className="font-heading italic text-white"
@@ -85,7 +85,7 @@ export default async function NosotrosPage(props: {
           <div className="mx-auto max-w-3xl">
             <ScrollReveal>
               <p className="mb-4 text-[12px] font-mono tracking-widest text-orange">
-                // Historia
+                {"// Historia"}
               </p>
               <h2
                 className="mb-10 font-heading text-white"
@@ -120,7 +120,7 @@ export default async function NosotrosPage(props: {
               <ScrollReveal>
                 <div className="lg h-full rounded-3xl p-8">
                   <p className="mb-3 text-[11px] font-mono tracking-widest text-orange">
-                    // Misión
+                    {"// Misión"}
                   </p>
                   <p className="font-heading italic text-white" style={{ fontSize: 26, lineHeight: 1.2 }}>
                     {about.mission}
@@ -132,7 +132,7 @@ export default async function NosotrosPage(props: {
               <ScrollReveal delay={0.1}>
                 <div className="lg h-full rounded-3xl p-8">
                   <p className="mb-3 text-[11px] font-mono tracking-widest text-orange">
-                    // Visión
+                    {"// Visión"}
                   </p>
                   <p className="font-heading italic text-white" style={{ fontSize: 26, lineHeight: 1.2 }}>
                     {about.vision}
@@ -151,7 +151,7 @@ export default async function NosotrosPage(props: {
             <ScrollReveal>
               <div className="mb-12 text-center">
                 <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                  // Valores
+                  {"// Valores"}
                 </p>
                 <h2
                   className="font-heading text-white"

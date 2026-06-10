@@ -135,7 +135,8 @@ export const ALLOWED_MIME = new Set([
   "image/webp",
   "image/avif",
   "image/gif",
-  "image/svg+xml",
+  // image/svg+xml omitido a propósito: un SVG puede contener <script> y,
+  // servido inline desde el mismo origen, ejecutaría JS (XSS almacenado).
   "video/mp4",
   "video/quicktime",
   "video/webm",

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
 import { isReviewLinkActive } from "@/lib/review";
+import { rateLimit } from "@/lib/rate-limit";
 import { uploadFile } from "@/lib/blob-storage";
 
 const schema = z.object({
@@ -21,6 +23,17 @@ export async function POST(
 
   const active = isReviewLinkActive(link);
   if (!active.active) return NextResponse.json({ error: "gone" }, { status: 410 });
+
+  // Solo usuarios autenticados o invitados explícitamente permitidos pueden subir frames.
+  const session = await auth();
+  if (!session?.user && !link.allowGuests) {
+    return NextResponse.json({ error: "guests_not_allowed" }, { status: 403 });
+  }
+
+  // Rate limit best-effort: 20 frames / minuto por slug (anti-abuso de storage).
+  if (!rateLimit(`frame:${slug}`, 20, 60_000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);

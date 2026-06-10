@@ -36,7 +36,7 @@ export function Process() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-14 text-center">
           <div className="mb-4 inline-block text-[12px] font-mono tracking-widest text-orange">
-            // Proceso
+            {"// Proceso"}
           </div>
           <h2
             className="font-heading text-white"

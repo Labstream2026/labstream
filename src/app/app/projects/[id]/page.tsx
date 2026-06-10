@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   TaskStatus,
@@ -174,7 +174,7 @@ export default async function ProjectDetailPage(props: {
   const { id } = await props.params;
 
   const isManager = await canManageProject(me.id, me.role, id);
-  const isClientApprover = await canApproveAsClient(me.id, id);
+  await canApproveAsClient(me.id, id);
 
   const [project, eligibleUsers] = await Promise.all([
     prisma.project.findUnique({

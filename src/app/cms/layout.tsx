@@ -1,10 +1,12 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { CmsRole, UserKind } from "@prisma/client";
 import { CmsShell } from "@/components/cms/CmsShell";
 import { CmsToaster } from "@/components/cms/Toaster";
 import { CommandPalette } from "@/components/cms/CommandPalette";
 import { readFlash } from "@/lib/cms-flash";
+import { canAccessCms } from "@/lib/cms-guard";
 
 export default async function CmsLayout({
   children,
@@ -31,6 +33,13 @@ export default async function CmsLayout({
   }
 
   const user = session.user;
+
+  // Defensa en profundidad: un usuario logueado que no es del CMS
+  // (cliente / equipo / productor) no debe ver el shell del CMS.
+  if (!canAccessCms(user.kind)) {
+    redirect("/app?denied_cms=1");
+  }
+
   const isSuper = user.role === CmsRole.SUPER_ADMIN;
   const isMaster = user.kind === UserKind.ADMIN;
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, escapeHtml } from "@/lib/email";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const schema = z.object({
   name: z.string().min(1).max(100),
@@ -11,6 +12,11 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Anti-spam: 5 envíos / 10 min por IP.
+  if (!rateLimit(`contact:${clientIp(req)}`, 5, 10 * 60_000)) {
+    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -101,12 +107,15 @@ export async function POST(req: Request) {
     </div>
   `;
 
+  // best-effort: no debe tumbar la request si la auto-respuesta falla
   await sendEmail({
     to: email,
     subject: customerSubject,
     html: customerHtml,
     replyTo: teamInbox,
     from: contactFrom,
+  }).catch((e) => {
+    console.error("[contact] auto-reply failed", e);
   });
 
   if (!teamResult.ok) {

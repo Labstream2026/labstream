@@ -54,6 +54,7 @@ export function AssetPicker({
 
   useEffect(() => {
     if (!open || tab !== "library") return;
+    // eslint-disable-next-line react-hooks/immutability
     loadAssets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab, search, filter]);

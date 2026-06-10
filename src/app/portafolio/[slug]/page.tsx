@@ -141,7 +141,7 @@ export default async function ProjectDetailPage(props: {
           {project.brief && (
             <ScrollReveal>
               <p className="mb-3 text-[11px] font-mono tracking-widest text-orange">
-                // El brief
+                {"// El brief"}
               </p>
               <p className="text-[14px] leading-relaxed text-white/80">
                 {project.brief}
@@ -151,7 +151,7 @@ export default async function ProjectDetailPage(props: {
           {project.process && (
             <ScrollReveal delay={0.1}>
               <p className="mb-3 text-[11px] font-mono tracking-widest text-orange">
-                // El proceso
+                {"// El proceso"}
               </p>
               <p className="text-[14px] leading-relaxed text-white/80">
                 {project.process}
@@ -161,7 +161,7 @@ export default async function ProjectDetailPage(props: {
           {project.result && (
             <ScrollReveal delay={0.2}>
               <p className="mb-3 text-[11px] font-mono tracking-widest text-orange">
-                // El resultado
+                {"// El resultado"}
               </p>
               <p className="text-[14px] leading-relaxed text-white/80">
                 {project.result}
@@ -177,7 +177,7 @@ export default async function ProjectDetailPage(props: {
           <div className="mx-auto max-w-5xl">
             <ScrollReveal>
               <p className="mb-4 text-[12px] font-mono tracking-widest text-orange">
-                // Pieza final
+                {"// Pieza final"}
               </p>
               <div className="overflow-hidden rounded-2xl">
                 {videoEmbed.kind === "iframe" ? (
@@ -207,7 +207,7 @@ export default async function ProjectDetailPage(props: {
           <div className="mx-auto max-w-6xl">
             <ScrollReveal>
               <p className="mb-6 text-[12px] font-mono tracking-widest text-orange">
-                // Galería
+                {"// Galería"}
               </p>
             </ScrollReveal>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -240,7 +240,7 @@ export default async function ProjectDetailPage(props: {
           <div className="mx-auto max-w-4xl">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Antes / después
+                {"// Antes / después"}
               </p>
               <h2
                 className="mb-8 font-heading text-white"
@@ -270,7 +270,7 @@ export default async function ProjectDetailPage(props: {
           <div className="mx-auto max-w-3xl">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Créditos
+                {"// Créditos"}
               </p>
               <div className="grid grid-cols-1 gap-x-12 gap-y-3 md:grid-cols-2">
                 {credits.map((c, i) => (

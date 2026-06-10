@@ -45,11 +45,12 @@ export function DriveFolderViewer({ versionId, folderId }: Props) {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [versionId]);
 
-  const files = data?.files ?? [];
+  const files = useMemo(() => data?.files ?? [], [data?.files]);
   const images = useMemo(() => files.filter((f) => f.isImage), [files]);
   const videos = useMemo(() => files.filter((f) => f.isVideo), [files]);
   const others = useMemo(

@@ -88,7 +88,7 @@ export default async function ServicioDetailPage(props: {
                 ← Todos los servicios
               </Link>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Servicio
+                {"// Servicio"}
               </p>
               <h1
                 className="font-heading italic text-white"
@@ -117,7 +117,7 @@ export default async function ServicioDetailPage(props: {
           <div className="mx-auto max-w-6xl">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Qué incluye
+                {"// Qué incluye"}
               </p>
               <h2
                 className="mb-10 font-heading text-white"
@@ -151,7 +151,7 @@ export default async function ServicioDetailPage(props: {
           <div className="mx-auto max-w-6xl">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Cómo trabajamos
+                {"// Cómo trabajamos"}
               </p>
               <h2
                 className="mb-10 font-heading text-white"
@@ -190,7 +190,7 @@ export default async function ServicioDetailPage(props: {
           <div className="mx-auto max-w-3xl text-center">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Inversión
+                {"// Inversión"}
               </p>
               <p className="font-heading italic text-white" style={{ fontSize: 28, lineHeight: 1.2 }}>
                 {service.pricing}

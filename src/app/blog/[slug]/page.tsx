@@ -32,11 +32,19 @@ function escapeHtml(s: string) {
     .replace(/'/g, "&#39;");
 }
 
+/** Solo permite http(s), mailto y rutas internas; neutraliza javascript:, data:, etc. */
+function safeHref(url: string): string {
+  const trimmed = url.trim();
+  if (/^(https?:|mailto:|\/)/i.test(trimmed)) return trimmed;
+  return "#";
+}
+
 function renderInline(s: string) {
   let out = escapeHtml(s);
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" class="text-orange underline-offset-4 hover:underline" target="_blank" rel="noreferrer">$1</a>',
+    (_m, text: string, url: string) =>
+      `<a href="${safeHref(url)}" class="text-orange underline-offset-4 hover:underline" target="_blank" rel="noreferrer">${text}</a>`,
   );
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
@@ -198,7 +206,7 @@ export default async function BlogPostPage(props: {
             </Link>
             {post.category && (
               <p className="mb-3 text-[11px] font-mono uppercase tracking-widest text-orange">
-                // {post.category}
+                {"// "}{post.category}
               </p>
             )}
             <h1
@@ -308,7 +316,7 @@ export default async function BlogPostPage(props: {
           <div className="mx-auto max-w-6xl">
             <ScrollReveal>
               <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                // Sigue leyendo
+                {"// Sigue leyendo"}
               </p>
               <h2
                 className="mb-10 font-heading text-white"
@@ -365,7 +373,7 @@ export default async function BlogPostPage(props: {
         <div className="mx-auto max-w-3xl text-center">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              // ¿Tienes un proyecto?
+              {"// ¿Tienes un proyecto?"}
             </p>
             <h2
               className="mb-6 font-heading italic text-white"

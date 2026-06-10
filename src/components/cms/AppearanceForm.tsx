@@ -273,7 +273,7 @@ function Preview({ state }: { state: Initial }) {
           className="mb-1 text-[11px] font-mono"
           style={{ color: state.colorPrimary }}
         >
-          // ejemplo de etiqueta
+          {"// ejemplo de etiqueta"}
         </div>
         <div
           className="italic"

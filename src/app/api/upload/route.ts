@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AssetSource } from "@prisma/client";
+import { canAccessCms } from "@/lib/cms-guard";
 import {
   uploadFile,
   isBlobConfigured,
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.redirect(new URL("/cms/login", req.url));
+  }
+  if (!canAccessCms(session.user.kind)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
   let formData: FormData;

@@ -42,7 +42,7 @@ export default async function ServiciosPage() {
         <div className="relative mx-auto max-w-5xl px-6">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              // Servicios
+              {"// Servicios"}
             </p>
             <h1
               className="font-heading italic text-white"
@@ -91,7 +91,7 @@ export default async function ServiciosPage() {
                     <div className="flex flex-col justify-center gap-4 p-8 md:p-12">
                       <div>
                         <p className="mb-2 text-[11px] font-mono tracking-widest text-orange">
-                          // 0{i + 1}
+                          {"// 0"}{i + 1}
                         </p>
                         <h2
                           className="font-heading text-white"

@@ -122,12 +122,12 @@ export default async function LeadsListPage(props: {
           Buscar
         </button>
         {(q || statusFilter) && (
-          <a
+          <Link
             href="/cms/leads"
             className="rounded-md px-3 py-2 text-[12px] text-white/55 hover:text-white"
           >
             Limpiar
-          </a>
+          </Link>
         )}
       </form>
 

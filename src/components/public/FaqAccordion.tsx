@@ -21,7 +21,7 @@ export function FaqAccordion({
       <div className="mx-auto max-w-3xl">
         <div className="mb-10 text-center">
           <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-            // {eyebrow}
+            {"// "}{eyebrow}
           </p>
           <h2
             className="font-heading text-white"

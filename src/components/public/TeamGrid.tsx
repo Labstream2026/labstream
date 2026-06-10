@@ -16,7 +16,7 @@ export function TeamGrid({
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
           <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-            // {eyebrow}
+            {"// "}{eyebrow}
           </p>
           <h2
             className="font-heading text-white"

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
@@ -18,6 +17,9 @@ import {
   PROJECT_ROLE_LABELS,
   creatableKinds,
   isMaster,
+  canManageProject,
+  producerCanManageUser,
+  producerCanUseOrg,
 } from "@/lib/app-guards";
 import { Avatar } from "@/components/app/ui/Avatar";
 
@@ -59,6 +61,24 @@ async function createUser(formData: FormData) {
   const allowed = creatableKinds(me.kind);
   if (!allowed.includes(parsed.data.kind)) {
     redirect("/app/users?error=denied_kind");
+  }
+
+  const meIsMaster = isMaster(me.kind);
+
+  // Un productor solo puede asignar a orgs/proyectos dentro de su ámbito.
+  if (!meIsMaster) {
+    if (parsed.data.kind === UserKind.CLIENT && parsed.data.orgId) {
+      const ok = await producerCanUseOrg(me.id, parsed.data.orgId);
+      if (!ok) redirect("/app/users?error=denied_scope");
+    }
+    if (
+      (parsed.data.kind === UserKind.PRODUCER ||
+        parsed.data.kind === UserKind.TEAM) &&
+      parsed.data.projectId
+    ) {
+      const ok = await canManageProject(me.id, me.role, parsed.data.projectId);
+      if (!ok) redirect("/app/users?error=denied_scope");
+    }
   }
 
   const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
@@ -119,10 +139,32 @@ async function createUser(formData: FormData) {
 
 async function toggleActive(formData: FormData) {
   "use server";
-  await requireProducerOrMaster();
+  const me = await requireProducerOrMaster();
   const id = String(formData.get("id") ?? "");
-  const u = await prisma.user.findUnique({ where: { id } });
+  if (!id) return;
+  const u = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, active: true, kind: true },
+  });
   if (!u) return;
+
+  // Un ADMIN nunca puede desactivarse por esta vía (evita lockout / escalada).
+  if (u.kind === UserKind.ADMIN) redirect("/app/users?error=denied_target");
+
+  if (!isMaster(me.kind)) {
+    // Un productor solo gestiona equipo/clientes dentro de su ámbito,
+    // nunca a otros productores ni a usuarios fuera de sus proyectos.
+    if (
+      u.kind === UserKind.PRODUCER ||
+      u.kind === UserKind.CMS_EDITOR ||
+      u.kind === UserKind.CMS_REVIEWER
+    ) {
+      redirect("/app/users?error=denied_target");
+    }
+    const inScope = await producerCanManageUser(me.id, u.id);
+    if (!inScope) redirect("/app/users?error=denied_target");
+  }
+
   await prisma.user.update({ where: { id }, data: { active: !u.active } });
   revalidatePath("/app/users");
 }
@@ -132,7 +174,25 @@ async function changeKind(formData: FormData) {
   const me = await requireProducerOrMaster();
   if (!isMaster(me.kind)) redirect("/app/users?error=admin_only");
   const id = String(formData.get("id") ?? "");
-  const newKind = String(formData.get("kind") ?? UserKind.TEAM) as UserKind;
+  if (!id || id === me.id) redirect("/app/users?error=denied_target");
+
+  const parsedKind = z.nativeEnum(UserKind).safeParse(formData.get("kind"));
+  // No se permite asignar ni reasignar el rol ADMIN desde la UI.
+  if (!parsedKind.success || parsedKind.data === UserKind.ADMIN) {
+    redirect("/app/users?error=invalid");
+  }
+  const newKind = parsedKind.data;
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { kind: true },
+  });
+  if (!target) redirect("/app/users?error=denied_target");
+  // Tampoco se puede degradar a un ADMIN existente.
+  if (target.kind === UserKind.ADMIN) {
+    redirect("/app/users?error=denied_target");
+  }
+
   const cmsRole: CmsRole =
     newKind === UserKind.CMS_REVIEWER ? CmsRole.REVIEWER : CmsRole.EDITOR;
   await prisma.user.update({
@@ -234,6 +294,12 @@ export default async function UsersPage(props: {
       )}
       {sp.error === "admin_only" && (
         <Banner kind="error" text="Solo el Administrador puede cambiar el tipo de un usuario." />
+      )}
+      {sp.error === "denied_scope" && (
+        <Banner kind="error" text="No puedes asignar usuarios a esa organización o proyecto." />
+      )}
+      {sp.error === "denied_target" && (
+        <Banner kind="error" text="No tienes permiso para gestionar a ese usuario." />
       )}
 
       <div className="lg overflow-x-auto rounded-2xl">
@@ -462,7 +528,7 @@ export default async function UsersPage(props: {
             Tipos de usuario · referencia rápida
           </h3>
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {Object.entries(USER_KIND_LABELS).map(([k, label]) => (
+            {Object.entries(USER_KIND_LABELS).map(([k]) => (
               <li key={k} className="rounded-lg border border-white/5 p-3">
                 <div className="flex items-center gap-2">
                   <KindBadge kind={k as UserKind} />

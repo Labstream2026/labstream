@@ -40,7 +40,7 @@ export function Testimonials({
     >
       <div className="mx-auto max-w-4xl text-center">
         <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-          // {eyebrow}
+          {"// "}{eyebrow}
         </p>
         <h2
           className="mb-12 font-heading text-white"

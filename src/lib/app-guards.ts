@@ -71,6 +71,19 @@ export function isMaster(kind: UserKind): boolean {
   return kind === UserKind.ADMIN;
 }
 
+/**
+ * Tipos de usuario que pueden entrar a la webapp `/app`.
+ * Los usuarios exclusivos del CMS (CMS_EDITOR / CMS_REVIEWER) NO entran.
+ */
+export function canAccessApp(kind: UserKind | null | undefined): boolean {
+  return (
+    kind === UserKind.ADMIN ||
+    kind === UserKind.PRODUCER ||
+    kind === UserKind.TEAM ||
+    kind === UserKind.CLIENT
+  );
+}
+
 export function canManageUsers(kind: UserKind): boolean {
   return kind === UserKind.ADMIN || kind === UserKind.PRODUCER;
 }
@@ -243,6 +256,67 @@ export async function listVisibleProjectIds(
   }
 
   return { all: false, ids: Array.from(direct) };
+}
+
+/**
+ * IDs de los proyectos donde el usuario es miembro directo (su "ámbito" de productor).
+ */
+async function memberProjectIds(userId: string): Promise<string[]> {
+  const memberships = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+  return memberships.map((m) => m.projectId);
+}
+
+/**
+ * Filtro Prisma de los usuarios visibles para un productor:
+ * él mismo, miembros de sus proyectos y clientes de las orgs de esos proyectos.
+ */
+export async function producerScopedUserWhere(meId: string) {
+  const projectIds = await memberProjectIds(meId);
+  return {
+    OR: [
+      { id: meId },
+      { projectMemberships: { some: { projectId: { in: projectIds } } } },
+      {
+        orgMemberships: {
+          some: { org: { clientProjects: { some: { id: { in: projectIds } } } } },
+        },
+      },
+    ],
+  };
+}
+
+/** ¿El productor `meId` tiene a `targetId` dentro de su ámbito de gestión? */
+export async function producerCanManageUser(
+  meId: string,
+  targetId: string,
+): Promise<boolean> {
+  if (targetId === meId) return false;
+  const scope = await producerScopedUserWhere(meId);
+  const found = await prisma.user.findFirst({
+    where: { AND: [{ id: targetId }, scope] },
+    select: { id: true },
+  });
+  return Boolean(found);
+}
+
+/** ¿El productor `meId` puede asignar usuarios a la organización `orgId`? */
+export async function producerCanUseOrg(
+  meId: string,
+  orgId: string,
+): Promise<boolean> {
+  const projectIds = await memberProjectIds(meId);
+  if (projectIds.length === 0) return false;
+  const proj = await prisma.project.findFirst({
+    where: {
+      id: { in: projectIds },
+      OR: [{ clientOrgId: orgId }, { producerOrgId: orgId }],
+    },
+    select: { id: true },
+  });
+  return Boolean(proj);
 }
 
 export const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
