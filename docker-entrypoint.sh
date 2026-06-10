@@ -1,6 +1,12 @@
 #!/bin/sh
 set -e
 
+# En la imagen standalone de Next.js NO existen los symlinks de
+# node_modules/.bin, así que `npx prisma` / `npx tsx` fallan con
+# "prisma: not found". Invocamos los CLIs directamente vía node.
+PRISMA_CLI="/app/node_modules/prisma/build/index.js"
+TSX_CLI="/app/node_modules/tsx/dist/cli.mjs"
+
 echo "[entrypoint] Waiting for Postgres at $DATABASE_URL ..."
 # crude wait — Prisma will retry too, this just gives clearer logs
 for i in $(seq 1 30); do
@@ -18,11 +24,11 @@ for i in $(seq 1 30); do
 done
 
 echo "[entrypoint] Running prisma migrate deploy ..."
-npx prisma migrate deploy
+node "$PRISMA_CLI" migrate deploy
 
 if [ "$RUN_SEED" = "true" ]; then
   echo "[entrypoint] Running public seed ..."
-  npx tsx prisma/seed-public.ts || echo "[entrypoint] Seed failed (continuing)"
+  node "$TSX_CLI" prisma/seed-public.ts || echo "[entrypoint] Seed failed (continuing)"
 fi
 
 echo "[entrypoint] Starting Next.js server: $@"
