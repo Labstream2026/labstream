@@ -65,14 +65,19 @@ const IMG = {
 async function main() {
   console.log("Seeding public content (Fase 1)…");
 
+  // Los 6 servicios son navegación fija del sitio (el navbar enlaza a sus
+  // slugs). Se siembran SIEMPRE con upsert idempotente —incluso si ya hay
+  // contenido— para que /servicio/[slug] nunca dé 404. No borra nada.
+  await seedServices();
+
   const portfolioCount = await prisma.portfolioProject.count();
   const blogCount = await prisma.blogPost.count();
   const teamCount = await prisma.teamMember.count();
 
   if (portfolioCount > 0 || blogCount > 0 || teamCount > 0) {
     console.log(
-      `✔ Skipping seed (existing data: portfolio=${portfolioCount}, blog=${blogCount}, team=${teamCount}). ` +
-        `Edit content via the CMS instead.`,
+      `✔ Servicios asegurados. Resto del seed omitido (ya hay contenido: portfolio=${portfolioCount}, blog=${blogCount}, team=${teamCount}). ` +
+        `Edita el contenido desde el CMS.`,
     );
     return;
   }
@@ -84,7 +89,6 @@ async function main() {
   await seedFaq();
   await seedTeam();
   await seedAbout();
-  await seedServices();
 
   console.log("\n✔ Seed público completo");
 }
