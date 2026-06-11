@@ -152,7 +152,7 @@ export default async function ServiceDetailPage(props: {
             addLabel="+ Añadir capacidad"
             emptyHint="Sin capacidades. Añade la primera abajo."
             fields={[
-              { key: "icon", label: "Icono", placeholder: "🎬", span: 1 },
+              { key: "icon", label: "Icono", type: "emoji", span: 1 },
               { key: "title", label: "Título", placeholder: "Comerciales TV", span: 2 },
               {
                 key: "desc",

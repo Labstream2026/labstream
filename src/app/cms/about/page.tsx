@@ -149,7 +149,7 @@ export default async function AboutPage() {
             addLabel="+ Añadir valor"
             emptyHint="Sin valores definidos."
             fields={[
-              { key: "icon", label: "Icono", placeholder: "🎬", span: 1 },
+              { key: "icon", label: "Icono", type: "emoji", span: 1 },
               { key: "title", label: "Título", placeholder: "Cine en todo", span: 2 },
               {
                 key: "desc",

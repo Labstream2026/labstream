@@ -9,6 +9,7 @@ import { ImageField } from "@/components/cms/ImageField";
 import { MarkdownEditor } from "@/components/cms/MarkdownEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
 import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts, SectionNav } from "@/components/cms/form";
+import { TagInput } from "@/components/cms/TagInput";
 
 const BLOG_SECTIONS = [
   { id: "basicos", label: "Básicos" },
@@ -132,11 +133,11 @@ export default async function BlogDetailPage(props: {
                 placeholder="Producción, IA, Industria…"
               />
             </Field>
-            <Field label="Tags" help="separados por coma">
-              <Input
+            <Field label="Tags" help="Escribe y pulsa Enter para añadir cada etiqueta.">
+              <TagInput
                 name="tags"
-                defaultValue={post.tags.join(", ")}
-                placeholder="ia, color, fotografía"
+                defaultValue={post.tags}
+                placeholder="ia, color, fotografía…"
               />
             </Field>
           </div>

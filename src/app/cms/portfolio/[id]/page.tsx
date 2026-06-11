@@ -9,6 +9,7 @@ import { ImageField } from "@/components/cms/ImageField";
 import { RowsEditor } from "@/components/cms/RowsEditor";
 import { LivePreview } from "@/components/cms/LivePreview";
 import { Section, Field, Input, Textarea, Select, FormActions, EditorToolbar, FormShortcuts, SectionNav } from "@/components/cms/form";
+import { TagInput } from "@/components/cms/TagInput";
 
 const PORTFOLIO_SECTIONS = [
   { id: "basicos", label: "Básicos" },
@@ -175,11 +176,11 @@ export default async function PortfolioDetailPage(props: {
                 ))}
               </Select>
             </Field>
-            <Field label="Tags" help="separados por coma">
-              <Input
+            <Field label="Tags" help="Escribe y pulsa Enter para añadir cada etiqueta.">
+              <TagInput
                 name="tags"
-                defaultValue={project.tags.join(", ")}
-                placeholder="comercial, fútbol, color"
+                defaultValue={project.tags}
+                placeholder="comercial, fútbol, color…"
               />
             </Field>
           </div>

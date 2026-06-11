@@ -7,10 +7,18 @@ export type RowField = {
   key: string;
   label?: string;
   placeholder?: string;
-  type?: "text" | "textarea" | "image";
+  type?: "text" | "textarea" | "image" | "emoji";
   /** col-span 1-6 in the row grid (default 1) */
   span?: 1 | 2 | 3 | 4 | 5 | 6;
 };
+
+/** Emojis sugeridos para iconos (producción audiovisual + creatividad). */
+const EMOJI_PRESETS = [
+  "🎬", "🎥", "📷", "📸", "🎞️", "🎨", "✨", "🎭",
+  "🎙️", "🔊", "🎵", "🎤", "💡", "⚡", "🚀", "🌟",
+  "🔥", "💎", "🏆", "📈", "🎯", "🤖", "🧠", "💻",
+  "📱", "🌐", "🖌️", "✂️", "🪄", "📺", "▶️", "🎪",
+];
 
 type Props = {
   /** Hidden input name; value will be JSON.stringify(rows) */
@@ -222,6 +230,19 @@ function FieldCell({
     );
   }
 
+  if (field.type === "emoji") {
+    return (
+      <div className={`flex flex-col gap-1 ${colSpanCls}`}>
+        {field.label && (
+          <span className="text-[10px] uppercase tracking-wider text-white/45">
+            {field.label}
+          </span>
+        )}
+        <EmojiInput value={value} onChange={onChange} />
+      </div>
+    );
+  }
+
   if (field.type === "textarea") {
     return (
       <div className={`flex flex-col gap-1 ${colSpanCls}`}>
@@ -255,6 +276,61 @@ function FieldCell({
         placeholder={field.placeholder}
         className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-white focus:border-orange/50 focus:outline-none"
       />
+    </div>
+  );
+}
+
+function EmojiInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-[20px] hover:border-orange/40"
+        title="Elegir emoji"
+      >
+        {value || "🙂"}
+      </button>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="o pega un emoji"
+        className="w-full min-w-0 flex-1 rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[12px] text-white focus:border-orange/50 focus:outline-none"
+      />
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute left-0 top-11 z-20 grid w-[244px] grid-cols-8 gap-1 rounded-xl border border-white/10 bg-[#0f0f0f] p-2 shadow-2xl">
+            {EMOJI_PRESETS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => {
+                  onChange(e);
+                  setOpen(false);
+                }}
+                className="flex h-7 w-7 items-center justify-center rounded text-[18px] hover:bg-white/10"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
