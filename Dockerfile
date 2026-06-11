@@ -44,12 +44,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Prisma runtime (schema + migrations + generated client)
+# Prisma schema + migrations (needed at runtime for `migrate deploy`)
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tsx ./node_modules/tsx
+
+# Full node_modules (overwrite the standalone-traced one). The prisma CLI
+# (`migrate deploy`) and tsx (seed) need transitive deps like `effect` that
+# the traced standalone node_modules omits. The full set is a superset, so the
+# Next standalone server keeps working.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Entrypoint script (runs migrations + seed, then starts server)
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
