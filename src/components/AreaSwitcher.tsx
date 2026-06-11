@@ -25,7 +25,19 @@ export function AreaSwitcher({
   canAccessCms,
   canAccessApp,
 }: Props) {
-  const tabs: { id: Area; label: string; sub: string; href: string; show: boolean }[] = [
+  // URL de la app de propuestas/cotización (externa, mantiene su estética).
+  // Configurable por env para portabilidad de hosting.
+  const proposalsUrl =
+    process.env.NEXT_PUBLIC_PROPOSALS_URL || "https://propuestas.labstreamsas.com";
+
+  const tabs: {
+    id: Area | "proposals";
+    label: string;
+    sub: string;
+    href: string;
+    show: boolean;
+    external?: boolean;
+  }[] = [
     {
       id: "cms",
       label: "Portal CMS",
@@ -47,6 +59,14 @@ export function AreaSwitcher({
       href: "/admin",
       show: isMaster,
     },
+    {
+      id: "proposals",
+      label: "Propuestas ↗",
+      sub: "Cotizaciones para clientes",
+      href: proposalsUrl,
+      show: canAccessApp,
+      external: true,
+    },
   ];
 
   const visible = tabs.filter((t) => t.show);
@@ -57,16 +77,13 @@ export function AreaSwitcher({
       <div className="flex flex-wrap gap-2">
         {visible.map((t) => {
           const isActive = t.id === current;
-          return (
-            <Link
-              key={t.id}
-              href={t.href}
-              className={`group flex flex-col rounded-xl border px-4 py-2.5 transition-all ${
-                isActive
-                  ? "border-orange/40 bg-orange/10"
-                  : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
-              }`}
-            >
+          const className = `group flex flex-col rounded-xl border px-4 py-2.5 transition-all ${
+            isActive
+              ? "border-orange/40 bg-orange/10"
+              : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+          }`;
+          const inner = (
+            <>
               <span
                 className={`text-[13px] font-semibold ${
                   isActive ? "text-orange" : "text-white/85 group-hover:text-white"
@@ -81,6 +98,17 @@ export function AreaSwitcher({
               >
                 {t.sub}
               </span>
+            </>
+          );
+          // Las áreas externas (Propuestas) abren en pestaña nueva y conservan
+          // su propia estética; no son rutas internas de Next.
+          return t.external ? (
+            <a key={t.id} href={t.href} target="_blank" rel="noopener noreferrer" className={className}>
+              {inner}
+            </a>
+          ) : (
+            <Link key={t.id} href={t.href} className={className}>
+              {inner}
             </Link>
           );
         })}
