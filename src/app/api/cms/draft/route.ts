@@ -7,7 +7,13 @@ import type { PreviewModel } from "@/lib/preview";
 
 const MAX_DRAFT_BYTES = 200 * 1024; // 200 KB tope por draft
 
-const VALID_MODELS: PreviewModel[] = ["portfolio", "blog", "service", "about"];
+const VALID_MODELS: PreviewModel[] = [
+  "portfolio",
+  "blog",
+  "service",
+  "about",
+  "home",
+];
 
 function modelDelegate(model: PreviewModel) {
   switch (model) {
@@ -19,6 +25,8 @@ function modelDelegate(model: PreviewModel) {
       return prisma.service;
     case "about":
       return prisma.aboutContent;
+    case "home":
+      return prisma.homeContent;
   }
 }
 

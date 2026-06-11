@@ -150,6 +150,34 @@ export const aboutSchema = z.object({
   values: jsonArray,
 });
 
+export const homeSchema = z.object({
+  // Hero
+  heroBadgeTag: optionalString,
+  heroBadgeText: optionalString,
+  heroTitle: optionalString,
+  heroSubtitle: optionalString,
+  heroCtaPrimaryLabel: optionalString,
+  heroCtaPrimaryHref: optionalString,
+  heroCtaSecondaryLabel: optionalString,
+  heroCtaSecondaryHref: optionalString,
+  heroBackgroundImage: optionalString,
+  heroBackgroundVideo: optionalString,
+  // Estadísticas
+  stats: jsonArray,
+  // Proceso
+  processEyebrow: optionalString,
+  processTitle: optionalString,
+  processSteps: jsonArray,
+  // CTA final
+  ctaEyebrow: optionalString,
+  ctaTitle: optionalString,
+  ctaSubtitle: optionalString,
+  ctaPrimaryLabel: optionalString,
+  ctaPrimaryHref: optionalString,
+  ctaSecondaryLabel: optionalString,
+  ctaSecondaryHref: optionalString,
+});
+
 export const leadStatusSchema = z.object({
   id: required("El id"),
   status: z.nativeEnum(LeadStatus),

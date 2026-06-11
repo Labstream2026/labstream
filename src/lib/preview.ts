@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { canAccessCms } from "@/lib/cms-guard";
 
-export type PreviewModel = "portfolio" | "blog" | "service" | "about";
+export type PreviewModel = "portfolio" | "blog" | "service" | "about" | "home";
 
 /**
  * Devuelve true si el visitante actual está viendo la página en modo preview:

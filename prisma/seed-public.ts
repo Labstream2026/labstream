@@ -70,6 +70,10 @@ async function main() {
   // contenido— para que /servicio/[slug] nunca dé 404. No borra nada.
   await seedServices();
 
+  // El contenido de la home se rellena con sus defaults SOLO si no existe
+  // (no pisa ediciones del CMS). Da contenido real para editar.
+  await seedHome();
+
   const portfolioCount = await prisma.portfolioProject.count();
   const blogCount = await prisma.blogPost.count();
   const teamCount = await prisma.teamMember.count();
@@ -725,6 +729,54 @@ Lo que no cambió: cada proyecto se trata como si fuera el único.`,
     },
   });
   console.log("  · About singleton");
+}
+
+async function seedHome() {
+  // Defaults = lo que estaba hardcodeado en la home. Mantener en sync con
+  // src/lib/home-defaults.ts (inlined aquí para no depender del alias @/ en tsx).
+  await prisma.homeContent.upsert({
+    where: { id: "singleton" },
+    update: {}, // no pisar ediciones existentes
+    create: {
+      id: "singleton",
+      heroBadgeTag: "2026",
+      heroBadgeText: "Producción audiovisual + IA",
+      heroTitle: "Narrativa que viaja más allá del ojo",
+      heroSubtitle:
+        "Producción audiovisual de vanguardia, fusionada con inteligencia artificial. Imágenes que definen marcas — extraordinarias y precisas.",
+      heroCtaPrimaryLabel: "Empieza tu proyecto",
+      heroCtaPrimaryHref: "/contacto",
+      heroCtaSecondaryLabel: "Ver showreel",
+      heroCtaSecondaryHref: "/portafolio",
+      heroBackgroundImage:
+        "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
+      heroBackgroundVideo: "https://assets.mixkit.co/videos/4842/4842-720.mp4",
+      stats: [
+        { value: "12+", label: "Años de experiencia" },
+        { value: "340", label: "Proyectos entregados" },
+        { value: "80", label: "Marcas confían" },
+        { value: "6", label: "Países en LATAM" },
+      ],
+      processEyebrow: "Proceso",
+      processTitle: "De la idea a la pantalla",
+      processSteps: [
+        { step: "01", title: "Briefing", desc: "Escuchamos tu visión y objetivos." },
+        { step: "02", title: "Concepto", desc: "Tratamiento creativo concreto." },
+        { step: "03", title: "Producción", desc: "Capturamos con criterio cinema." },
+        { step: "04", title: "Post", desc: "Edit, color, motion, audio." },
+        { step: "05", title: "Entrega", desc: "Versiones para cada canal." },
+      ],
+      ctaEyebrow: "¿Empezamos?",
+      ctaTitle: "Cuéntanos tu próximo proyecto",
+      ctaSubtitle:
+        "Respondemos en menos de 24 horas. La primera conversación es gratis y te dejamos un brief con criterio independiente.",
+      ctaPrimaryLabel: "Hablemos",
+      ctaPrimaryHref: "/contacto",
+      ctaSecondaryLabel: "Ver portafolio",
+      ctaSecondaryHref: "/portafolio",
+    },
+  });
+  console.log("  · Home (contenido por defecto asegurado)");
 }
 
 async function seedServices() {

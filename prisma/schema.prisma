@@ -850,6 +850,39 @@ model AboutContent {
   updatedAt     DateTime @updatedAt
 }
 
+model HomeContent {
+  // Singleton — contenido editable de la home (/). Lo que antes estaba
+  // hardcodeado: hero, estadísticas, proceso y CTA final.
+  id                    String   @id @default("singleton")
+  // Hero
+  heroBadgeTag          String?  // ej. "2026"
+  heroBadgeText         String?  // ej. "Producción audiovisual + IA"
+  heroTitle             String?
+  heroSubtitle          String?
+  heroCtaPrimaryLabel   String?
+  heroCtaPrimaryHref    String?
+  heroCtaSecondaryLabel String?
+  heroCtaSecondaryHref  String?
+  heroBackgroundImage   String?
+  heroBackgroundVideo   String?
+  // Estadísticas — [{ value, label }, ...]
+  stats                 Json?
+  // Proceso
+  processEyebrow        String?
+  processTitle          String?
+  processSteps          Json?    // [{ step, title, desc }, ...]
+  // CTA final
+  ctaEyebrow            String?
+  ctaTitle              String?
+  ctaSubtitle           String?
+  ctaPrimaryLabel       String?
+  ctaPrimaryHref        String?
+  ctaSecondaryLabel     String?
+  ctaSecondaryHref      String?
+  draft                 Json?    // borrador en vivo del CMS — overrides para preview
+  updatedAt             DateTime @updatedAt
+}
+
 enum LeadStatus {
   NEW
   CONTACTED

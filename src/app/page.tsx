@@ -12,6 +12,8 @@ import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { AnimatedStat } from "@/components/public/AnimatedStat";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { ArrowUpRight, ChevronRight } from "@/components/Icons";
+import { isPreviewMode, mergeDraft } from "@/lib/preview";
+import { resolveHome } from "@/lib/home-defaults";
 
 const PORTFOLIO_CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -25,9 +27,25 @@ const PORTFOLIO_CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   OTRO: "Otro",
 };
 
-export default async function HomePage() {
-  const [services, logos, testimonials, faqs, featuredProjects, latestPosts] =
-    await Promise.all([
+export default async function HomePage(props: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  const preview = await isPreviewMode(await props.searchParams);
+
+  const [
+    homeRecord,
+    services,
+    logos,
+    testimonials,
+    faqs,
+    featuredProjects,
+    latestPosts,
+  ] = await Promise.all([
+      prisma.homeContent.upsert({
+        where: { id: "singleton" },
+        update: {},
+        create: { id: "singleton" },
+      }),
       prisma.service.findMany({
         where: { visible: true },
         orderBy: { order: "asc" },
@@ -58,6 +76,12 @@ export default async function HomePage() {
       }),
     ]);
 
+  // Contenido editable de la home (con fallback a los defaults). En preview,
+  // mergea el borrador en vivo encima.
+  const home = resolveHome(
+    preview ? mergeDraft(homeRecord, homeRecord.draft) : homeRecord,
+  );
+
   return (
     <main>
       <ScrollProgress />
@@ -65,25 +89,33 @@ export default async function HomePage() {
       <WhatsAppFloat />
 
       <HomeHero
-        title="Narrativa que viaja más allá del ojo"
-        subtitle="Producción audiovisual de vanguardia, fusionada con inteligencia artificial. Imágenes que definen marcas — extraordinarias y precisas."
-        ctaPrimary={{ label: "Empieza tu proyecto", href: "/contacto" }}
-        ctaSecondary={{ label: "Ver showreel", href: "/portafolio" }}
-        backgroundVideo="https://assets.mixkit.co/videos/4842/4842-720.mp4"
-        backgroundImage="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80"
+        badge={{ tag: home.heroBadgeTag, text: home.heroBadgeText }}
+        title={home.heroTitle}
+        subtitle={home.heroSubtitle}
+        ctaPrimary={{
+          label: home.heroCtaPrimaryLabel,
+          href: home.heroCtaPrimaryHref,
+        }}
+        ctaSecondary={{
+          label: home.heroCtaSecondaryLabel,
+          href: home.heroCtaSecondaryHref,
+        }}
+        backgroundVideo={home.heroBackgroundVideo}
+        backgroundImage={home.heroBackgroundImage}
       />
 
       <ClientLogos logos={logos} />
 
       {/* Stats */}
-      <section className="px-6 py-20" style={{ background: "var(--bg)" }}>
-        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 md:grid-cols-4">
-          <AnimatedStat value="12+" label="Años de experiencia" />
-          <AnimatedStat value="340" label="Proyectos entregados" />
-          <AnimatedStat value="80" label="Marcas confían" />
-          <AnimatedStat value="6" label="Países en LATAM" />
-        </div>
-      </section>
+      {home.stats.length > 0 && (
+        <section className="px-6 py-20" style={{ background: "var(--bg)" }}>
+          <div className="mx-auto grid max-w-5xl grid-cols-2 gap-4 md:grid-cols-4">
+            {home.stats.map((stat, i) => (
+              <AnimatedStat key={i} value={stat.value} label={stat.label} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Services grid */}
       <section
@@ -240,57 +272,54 @@ export default async function HomePage() {
       <Testimonials items={testimonials} />
 
       {/* Process */}
-      <section className="px-6 py-24" style={{ background: "var(--bg)" }}>
-        <div className="mx-auto max-w-6xl">
-          <ScrollReveal>
-            <div className="mb-14 text-center">
-              <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-                {"// Proceso"}
-              </p>
-              <h2
-                className="font-heading text-white"
-                style={{
-                  fontSize: "clamp(40px,5.5vw,72px)",
-                  lineHeight: 1,
-                  letterSpacing: "-1.5px",
-                }}
-              >
-                De la idea <span className="italic">a la pantalla</span>
-              </h2>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-            {[
-              { n: "01", t: "Briefing", d: "Escuchamos tu visión y objetivos." },
-              { n: "02", t: "Concepto", d: "Tratamiento creativo concreto." },
-              { n: "03", t: "Producción", d: "Capturamos con criterio cinema." },
-              { n: "04", t: "Post", d: "Edit, color, motion, audio." },
-              { n: "05", t: "Entrega", d: "Versiones para cada canal." },
-            ].map((s, i) => (
-              <ScrollReveal key={s.n} delay={i * 0.06}>
-                <div className="lg flex h-full flex-col rounded-2xl p-6">
-                  <div
-                    className="mb-3 font-heading italic"
-                    style={{
-                      fontSize: 36,
-                      color: "var(--orange)",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {s.n}
+      {home.processSteps.length > 0 && (
+        <section className="px-6 py-24" style={{ background: "var(--bg)" }}>
+          <div className="mx-auto max-w-6xl">
+            <ScrollReveal>
+              <div className="mb-14 text-center">
+                <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
+                  {"// "}
+                  {home.processEyebrow}
+                </p>
+                <h2
+                  className="font-heading text-white"
+                  style={{
+                    fontSize: "clamp(40px,5.5vw,72px)",
+                    lineHeight: 1,
+                    letterSpacing: "-1.5px",
+                  }}
+                >
+                  {home.processTitle}
+                </h2>
+              </div>
+            </ScrollReveal>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {home.processSteps.map((s, i) => (
+                <ScrollReveal key={i} delay={i * 0.06}>
+                  <div className="lg flex h-full flex-col rounded-2xl p-6">
+                    <div
+                      className="mb-3 font-heading italic"
+                      style={{
+                        fontSize: 36,
+                        color: "var(--orange)",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {s.step}
+                    </div>
+                    <h3 className="mb-2 text-[16px] font-semibold text-white">
+                      {s.title}
+                    </h3>
+                    <p className="text-[13px] font-light leading-relaxed text-white/65">
+                      {s.desc}
+                    </p>
                   </div>
-                  <h3 className="mb-2 text-[16px] font-semibold text-white">
-                    {s.t}
-                  </h3>
-                  <p className="text-[13px] font-light leading-relaxed text-white/65">
-                    {s.d}
-                  </p>
-                </div>
-              </ScrollReveal>
-            ))}
+                </ScrollReveal>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Latest blog posts */}
       {latestPosts.length > 0 && (
@@ -371,7 +400,8 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl text-center">
           <ScrollReveal>
             <p className="mb-3 text-[12px] font-mono tracking-widest text-orange">
-              {"// ¿Empezamos?"}
+              {"// "}
+              {home.ctaEyebrow}
             </p>
             <h2
               className="font-heading italic text-white"
@@ -381,21 +411,20 @@ export default async function HomePage() {
                 letterSpacing: "-1.5px",
               }}
             >
-              Cuéntanos tu próximo proyecto
+              {home.ctaTitle}
             </h2>
             <p className="mx-auto mt-5 max-w-md text-[15px] font-light text-white/70">
-              Respondemos en menos de 24 horas. La primera conversación es gratis y
-              te dejamos un brief con criterio independiente.
+              {home.ctaSubtitle}
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
-              <Link href="/contacto" className="btn-primary">
-                Hablemos <ArrowUpRight />
+              <Link href={home.ctaPrimaryHref} className="btn-primary">
+                {home.ctaPrimaryLabel} <ArrowUpRight />
               </Link>
               <Link
-                href="/portafolio"
+                href={home.ctaSecondaryHref}
                 className="rounded-full border border-white/15 px-6 py-3 text-[14px] font-medium text-white/85 hover:bg-white/5 hover:text-white"
               >
-                Ver portafolio
+                {home.ctaSecondaryLabel}
               </Link>
             </div>
           </ScrollReveal>

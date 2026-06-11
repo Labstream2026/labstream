@@ -200,6 +200,8 @@ function serializeForModel(
       return serializeService(form);
     case "about":
       return serializeAbout(form);
+    case "home":
+      return serializeHome(form);
   }
 }
 
@@ -295,5 +297,31 @@ function serializeAbout(form: FormData): Record<string, unknown> {
     mission: strOrNull(form, "mission"),
     vision: strOrNull(form, "vision"),
     values: jsonOrNull(form, "values"),
+  };
+}
+
+function serializeHome(form: FormData): Record<string, unknown> {
+  return {
+    heroBadgeTag: strOrNull(form, "heroBadgeTag"),
+    heroBadgeText: strOrNull(form, "heroBadgeText"),
+    heroTitle: strOrNull(form, "heroTitle"),
+    heroSubtitle: strOrNull(form, "heroSubtitle"),
+    heroCtaPrimaryLabel: strOrNull(form, "heroCtaPrimaryLabel"),
+    heroCtaPrimaryHref: strOrNull(form, "heroCtaPrimaryHref"),
+    heroCtaSecondaryLabel: strOrNull(form, "heroCtaSecondaryLabel"),
+    heroCtaSecondaryHref: strOrNull(form, "heroCtaSecondaryHref"),
+    heroBackgroundImage: strOrNull(form, "heroBackgroundImage"),
+    heroBackgroundVideo: strOrNull(form, "heroBackgroundVideo"),
+    stats: jsonOrNull(form, "stats"),
+    processEyebrow: strOrNull(form, "processEyebrow"),
+    processTitle: strOrNull(form, "processTitle"),
+    processSteps: jsonOrNull(form, "processSteps"),
+    ctaEyebrow: strOrNull(form, "ctaEyebrow"),
+    ctaTitle: strOrNull(form, "ctaTitle"),
+    ctaSubtitle: strOrNull(form, "ctaSubtitle"),
+    ctaPrimaryLabel: strOrNull(form, "ctaPrimaryLabel"),
+    ctaPrimaryHref: strOrNull(form, "ctaPrimaryHref"),
+    ctaSecondaryLabel: strOrNull(form, "ctaSecondaryLabel"),
+    ctaSecondaryHref: strOrNull(form, "ctaSecondaryHref"),
   };
 }
