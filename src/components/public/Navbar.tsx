@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ArrowUpRight } from "@/components/Icons";
 
@@ -29,6 +29,21 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+
+  // "Hover intent": abrir al instante, pero cerrar con un pequeño retraso para
+  // que el cursor pueda viajar del botón al menú sin que se cierre de golpe.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openMenu = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setSvcOpen(true);
+  };
+  const closeMenu = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setSvcOpen(false), 220);
+  };
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -74,9 +89,9 @@ export function Navbar() {
                 <div
                   key={item.id}
                   className="relative"
-                  onMouseEnter={() => setSvcOpen(true)}
-                  onMouseLeave={() => setSvcOpen(false)}
-                  onFocus={() => setSvcOpen(true)}
+                  onMouseEnter={openMenu}
+                  onMouseLeave={closeMenu}
+                  onFocus={openMenu}
                   onBlur={(e) => {
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                       setSvcOpen(false);
@@ -115,37 +130,42 @@ export function Navbar() {
                     </svg>
                   </Link>
                   {svcOpen && (
-                    <div
-                      role="menu"
-                      aria-label="Servicios"
-                      className="lg absolute left-1/2 top-[calc(100%+10px)] -translate-x-1/2 overflow-hidden rounded-2xl py-2"
-                      style={{
-                        minWidth: 260,
-                        background: "rgba(8,8,8,0.97)",
-                        boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
-                      }}
-                    >
-                      <Link
-                        href="/servicios"
-                        role="menuitem"
-                        onClick={() => setSvcOpen(false)}
-                        className="flex items-center gap-3 border-l-2 border-orange px-5 py-[11px] text-[12px] font-semibold text-white hover:bg-white/5 focus-visible:bg-white/10 focus-visible:outline-none"
+                    // Contenedor exterior pegado al botón (top-full) con un
+                    // puente transparente de 10px (pt-2.5): el cursor viaja del
+                    // botón al menú sin pasar por una zona muerta que lo cierre.
+                    <div className="absolute left-1/2 top-full -translate-x-1/2 pt-2.5">
+                      <div
+                        role="menu"
+                        aria-label="Servicios"
+                        className="overflow-hidden rounded-2xl py-2"
+                        style={{
+                          minWidth: 260,
+                          background: "rgba(8,8,8,0.97)",
+                          boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
+                        }}
                       >
-                        Ver todos los servicios →
-                      </Link>
-                      <div className="my-1 h-px bg-white/5" />
-                      {SERVICES.map((s) => (
                         <Link
-                          key={s.id}
-                          href={`/servicio/${s.id}`}
+                          href="/servicios"
                           role="menuitem"
                           onClick={() => setSvcOpen(false)}
-                          className="flex items-center gap-3 border-l-2 border-transparent px-5 py-[10px] text-[12px] font-medium text-white/65 transition-all hover:border-l-orange hover:bg-white/5 hover:text-white focus-visible:border-l-orange focus-visible:bg-white/10 focus-visible:text-white focus-visible:outline-none"
+                          className="flex items-center gap-3 border-l-2 border-orange px-5 py-[11px] text-[12px] font-semibold text-white hover:bg-white/5 focus-visible:bg-white/10 focus-visible:outline-none"
                         >
-                          <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full bg-orange/50" />
-                          {s.label}
+                          Ver todos los servicios →
                         </Link>
-                      ))}
+                        <div className="my-1 h-px bg-white/5" />
+                        {SERVICES.map((s) => (
+                          <Link
+                            key={s.id}
+                            href={`/servicio/${s.id}`}
+                            role="menuitem"
+                            onClick={() => setSvcOpen(false)}
+                            className="flex items-center gap-3 border-l-2 border-transparent px-5 py-[10px] text-[12px] font-medium text-white/65 transition-all hover:border-l-orange hover:bg-white/5 hover:text-white focus-visible:border-l-orange focus-visible:bg-white/10 focus-visible:text-white focus-visible:outline-none"
+                          >
+                            <span className="h-[5px] w-[5px] flex-shrink-0 rounded-full bg-orange/50" />
+                            {s.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

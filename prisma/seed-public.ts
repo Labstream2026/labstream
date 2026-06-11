@@ -850,19 +850,82 @@ async function seedServices() {
     },
   ];
 
+  // Datos base de cada servicio (título/resumen/tags/orden). Antes vivían solo
+  // en el seed demo (seed.ts), por lo que en producción los servicios no se
+  // creaban y las páginas /servicio/[slug] daban 404. Ahora seed-public es
+  // autosuficiente: hace upsert (crea si no existe + enriquece).
+  const base: Record<
+    string,
+    { title: string; summary: string; content: string; order: number }
+  > = {
+    "produccion-audiovisual": {
+      title: "Producción Audiovisual",
+      summary:
+        "Spots, documentales, branded content y videoclips con equipo cinema de gama alta.",
+      content: "Spots,Documentales,Branded,Videoclips",
+      order: 0,
+    },
+    fotografia: {
+      title: "Fotografía",
+      summary:
+        "Fotografía de marca, producto y editorial. Luz, composición y dirección de arte en cada disparo.",
+      content: "Producto,Editorial,Marca,Campaña",
+      order: 1,
+    },
+    "contenido-redes": {
+      title: "Contenido para Redes",
+      summary:
+        "Reels, Stories y TikToks nativos para cada plataforma. Estrategia + producción en volumen.",
+      content: "Reels,TikTok,Shorts,Stories",
+      order: 2,
+    },
+    "ia-contenido": {
+      title: "IA Aplicada al Contenido",
+      summary:
+        "Integración de IA en guión, edición automática, voiceover sintético y generación de conceptos.",
+      content: "Generativo,Voiceover IA,Auto-edit,Concept",
+      order: 3,
+    },
+    livestreaming: {
+      title: "Livestreaming",
+      summary:
+        "Transmisiones en vivo broadcast para eventos corporativos, conciertos y conferencias.",
+      content: "Multicámara,Multicanal,Broadcast,Real-time",
+      order: 4,
+    },
+    "post-produccion": {
+      title: "Post-producción",
+      summary:
+        "Edición, color grading, motion graphics y diseño sonoro. El acabado final lo cambia todo.",
+      content: "Edición,Color,Motion,Audio",
+      order: 5,
+    },
+  };
+
   for (const u of updates) {
-    await prisma.service.updateMany({
+    const b = base[u.slug];
+    const detail = {
+      longDescription: u.longDescription,
+      heroImageUrl: u.heroImageUrl,
+      capabilities: u.capabilities,
+      process: u.process,
+      pricing: u.pricing,
+    };
+    await prisma.service.upsert({
       where: { slug: u.slug },
-      data: {
-        longDescription: u.longDescription,
-        heroImageUrl: u.heroImageUrl,
-        capabilities: u.capabilities,
-        process: u.process,
-        pricing: u.pricing,
+      update: detail,
+      create: {
+        slug: u.slug,
+        title: b.title,
+        summary: b.summary,
+        content: b.content,
+        order: b.order,
+        visible: true,
+        ...detail,
       },
     });
   }
-  console.log("  · 6 servicios con detalle completo");
+  console.log("  · 6 servicios (base + detalle) creados/actualizados");
 }
 
 main()
