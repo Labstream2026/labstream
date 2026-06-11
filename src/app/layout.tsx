@@ -29,20 +29,36 @@ export default async function RootLayout({
   const site = await getSiteSettings();
   const fontsUrl = buildGoogleFontsUrl(site.fontHeading, site.fontBody);
 
+  // Defensa en profundidad: este bloque va en un <style dangerouslySetInnerHTML>,
+  // así que saneamos los valores aunque ya se validen al guardarlos (evita XSS
+  // si la BD trae datos viejos/manipulados).
+  const hex = (v: string | null | undefined, fb: string) =>
+    /^#[0-9a-fA-F]{6}$/.test((v ?? "").trim()) ? (v as string).trim() : fb;
+  // Para el nombre de fuente solo permitimos letras/números/espacios/guiones.
+  const font = (v: string | null | undefined, fb: string) =>
+    /^[a-zA-Z0-9 _-]{1,40}$/.test((v ?? "").trim()) ? (v as string).trim() : fb;
+
+  const cPrimary = hex(site.colorPrimary, "#E8640C");
+  const cAccent = hex(site.colorAccent, "#7B61FF");
+  const cBg = hex(site.colorBg, "#080808");
+  const cText = hex(site.colorText, "#F0F0EE");
+  const fHeading = font(site.fontHeading, "Instrument Serif");
+  const fBody = font(site.fontBody, "Figtree");
+
   // Inyectamos las CSS variables como style en el <html> para que
   // todos los componentes con var(--xxx) las hereden.
   const themeStyle = `
     :root {
-      --color-primary: ${site.colorPrimary};
-      --color-accent: ${site.colorAccent};
-      --color-bg: ${site.colorBg};
-      --color-text: ${site.colorText};
-      --orange: ${site.colorPrimary};
-      --accent: ${site.colorAccent};
-      --bg: ${site.colorBg};
-      --text: ${site.colorText};
-      --font-heading: '${site.fontHeading}', serif;
-      --font-body: '${site.fontBody}', sans-serif;
+      --color-primary: ${cPrimary};
+      --color-accent: ${cAccent};
+      --color-bg: ${cBg};
+      --color-text: ${cText};
+      --orange: ${cPrimary};
+      --accent: ${cAccent};
+      --bg: ${cBg};
+      --text: ${cText};
+      --font-heading: '${fHeading}', serif;
+      --font-body: '${fBody}', sans-serif;
     }
   `;
 

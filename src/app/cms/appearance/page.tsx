@@ -1,21 +1,44 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireCmsUser } from "@/lib/cms-guard";
+import { requireSuperAdmin } from "@/lib/cms-guard";
 import { FONT_OPTIONS } from "@/lib/site-settings";
 import { AppearanceForm } from "@/components/cms/AppearanceForm";
 
+/** Acepta solo hex #RRGGBB; cualquier otra cosa cae al default. Estos valores
+ *  se interpolan en un <style dangerouslySetInnerHTML> del sitio público, así
+ *  que sin validación serían un vector de XSS almacenado de alcance total. */
+function safeHex(raw: FormDataEntryValue | null, fallback: string): string {
+  const v = String(raw ?? "").trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v) ? v : fallback;
+}
+
+/** La fuente también se interpola en el <style>; solo permitimos las del catálogo. */
+const ALLOWED_FONTS = new Set<string>([...FONT_OPTIONS.heading, ...FONT_OPTIONS.body]);
+function safeFont(raw: FormDataEntryValue | null, fallback: string): string {
+  const v = String(raw ?? "").trim();
+  return ALLOWED_FONTS.has(v) ? v : fallback;
+}
+
+/** logo/favicon se usan como src de <img>; solo http(s) o rutas internas. */
+function safeAssetUrl(raw: FormDataEntryValue | null): string | null {
+  const v = String(raw ?? "").trim();
+  if (!v) return null;
+  return /^(https?:\/\/|\/)/i.test(v) ? v : null;
+}
+
 async function saveAppearance(formData: FormData) {
   "use server";
-  await requireCmsUser();
+  // Cambia la apariencia de TODO el sitio público (sink de XSS): solo SUPER_ADMIN.
+  await requireSuperAdmin();
 
-  const fontHeading = String(formData.get("fontHeading") ?? "Instrument Serif");
-  const fontBody = String(formData.get("fontBody") ?? "Figtree");
-  const colorPrimary = String(formData.get("colorPrimary") ?? "#E8640C");
-  const colorAccent = String(formData.get("colorAccent") ?? "#7B61FF");
-  const colorBg = String(formData.get("colorBg") ?? "#080808");
-  const colorText = String(formData.get("colorText") ?? "#F0F0EE");
-  const logoUrl = String(formData.get("logoUrl") ?? "").trim() || null;
-  const faviconUrl = String(formData.get("faviconUrl") ?? "").trim() || null;
+  const fontHeading = safeFont(formData.get("fontHeading"), "Instrument Serif");
+  const fontBody = safeFont(formData.get("fontBody"), "Figtree");
+  const colorPrimary = safeHex(formData.get("colorPrimary"), "#E8640C");
+  const colorAccent = safeHex(formData.get("colorAccent"), "#7B61FF");
+  const colorBg = safeHex(formData.get("colorBg"), "#080808");
+  const colorText = safeHex(formData.get("colorText"), "#F0F0EE");
+  const logoUrl = safeAssetUrl(formData.get("logoUrl"));
+  const faviconUrl = safeAssetUrl(formData.get("faviconUrl"));
 
   await prisma.siteSettings.update({
     where: { id: "singleton" },
@@ -36,7 +59,7 @@ async function saveAppearance(formData: FormData) {
 }
 
 export default async function AppearancePage() {
-  await requireCmsUser();
+  await requireSuperAdmin();
   const settings = await prisma.siteSettings.findUnique({
     where: { id: "singleton" },
   });

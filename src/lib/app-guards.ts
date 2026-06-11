@@ -49,6 +49,8 @@ export async function getPrimaryAppRole(userId: string, cmsRole: CmsRole): Promi
 export async function requireAppUser() {
   const session = await auth();
   if (!session?.user) redirect("/cms/login?next=/app");
+  // Sesión refrescada desde la BD: un usuario desactivado queda fuera.
+  if (session.user.active === false) redirect("/cms/login?error=inactive");
   return session.user;
 }
 

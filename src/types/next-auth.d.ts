@@ -15,6 +15,7 @@ declare module "next-auth" {
       name: string | null;
       role: CmsRole;
       kind: UserKind;
+      active: boolean;
     };
   }
 }
@@ -24,5 +25,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: CmsRole;
     kind: UserKind;
+    active: boolean;
+    refreshedAt: number;
   }
 }

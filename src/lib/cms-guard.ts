@@ -19,6 +19,10 @@ export async function requireCmsUser() {
   if (!session?.user) {
     redirect("/cms/login?next=/cms");
   }
+  // Sesión refrescada desde la BD: un usuario desactivado queda fuera.
+  if (session.user.active === false) {
+    redirect("/cms/login?error=inactive");
+  }
   if (!canAccessCms(session.user.kind)) {
     redirect("/app?denied_cms=1");
   }

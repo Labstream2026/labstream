@@ -12,7 +12,7 @@ import {
   extractVimeoId,
   extractYouTubeId,
 } from "@/lib/google-drive";
-import { EmbedKind } from "@prisma/client";
+import { EmbedKind, ProposalStatus } from "@prisma/client";
 import {
   computeBudget,
   formatMoney,
@@ -45,6 +45,13 @@ function paragraphs(text: string | null | undefined) {
   return text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
 }
 
+/** Solo permite http(s)/mailto/rutas internas; neutraliza javascript:, data:, etc. */
+function safeHref(url: string | null | undefined): string {
+  const trimmed = (url ?? "").trim();
+  if (/^(https?:|mailto:|\/)/i.test(trimmed)) return trimmed;
+  return "#";
+}
+
 function refEmbed(url: string): string | null {
   const detected = detectEmbedKind(url);
   if (detected.kind === EmbedKind.YOUTUBE) {
@@ -65,7 +72,20 @@ export default async function PublicProposalPage(props: {
   const p = await prisma.proposal.findUnique({ where: { slug } });
   if (!p) notFound();
 
-  const accent = p.accentColor?.trim() || "#E8640C";
+  // La propuesta es un documento CONFIDENCIAL sin auth: el slug es el único
+  // control de acceso. Solo se muestra públicamente si está enviada/aceptada
+  // y no ha vencido. Borrador/rechazada/vencida → 404 (no filtrar precios ni
+  // datos del cliente).
+  const isPublic =
+    (p.status === ProposalStatus.SENT || p.status === ProposalStatus.ACCEPTED) &&
+    (!p.validUntil || p.validUntil >= new Date());
+  if (!isPublic) notFound();
+
+  // accentColor se interpola en `style` (template strings) servidos al cliente.
+  // Validar a hex estricto evita inyección de CSS (exfiltración por url(), etc.).
+  const accent = /^#[0-9a-fA-F]{6}$/.test(p.accentColor?.trim() ?? "")
+    ? p.accentColor!.trim()
+    : "#E8640C";
 
   const stats = (p.stats as StatItem[] | null) ?? [];
   const selectedWork = (p.selectedWork as SelectedWorkItem[] | null) ?? [];
@@ -409,7 +429,7 @@ export default async function PublicProposalPage(props: {
                           </div>
                         ) : (
                           <a
-                            href={r.url}
+                            href={safeHref(r.url)}
                             target="_blank"
                             rel="noreferrer"
                             className="lg flex items-center justify-between rounded-2xl px-5 py-4 hover:bg-white/[0.07]"

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   TaskStatus,
@@ -9,15 +9,28 @@ import {
   DeliverableKind,
   DeliverableStatus,
 } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
   requireProjectViewer,
   requireProjectManager,
   canManageProject,
   canApproveAsClient,
+  isMaster,
+  producerCanManageUser,
+  producerScopedUserWhere,
   PROJECT_ROLE_LABELS,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
+
+/** Roles que conceden poder de gestión o de aprobación-cliente; solo el master
+ *  (ADMIN) puede otorgarlos. Evita que un PRODUCER fabrique co-managers o
+ *  aprobadores-cliente sintéticos. */
+const PRIVILEGED_PROJECT_ROLES: ProjectRole[] = [
+  ProjectRole.EXEC_PRODUCER,
+  ProjectRole.PRODUCER,
+  ProjectRole.CLIENT_LEAD,
+];
 import { detectEmbedKind } from "@/lib/google-drive";
 import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
 import { Avatar } from "@/components/app/ui/Avatar";
@@ -62,11 +75,24 @@ async function addMember(formData: FormData) {
   "use server";
   const projectId = String(formData.get("projectId") ?? "");
   const userId = String(formData.get("userId") ?? "");
-  const projectRole = String(
-    formData.get("projectRole") ?? ProjectRole.OTHER,
-  ) as ProjectRole;
-  await requireProjectManager(projectId);
-  if (!userId) return;
+  const parsedRole = z
+    .nativeEnum(ProjectRole)
+    .safeParse(formData.get("projectRole"));
+  const me = await requireProjectManager(projectId);
+  if (!userId || !parsedRole.success) {
+    redirect(`/app/projects/${projectId}?error=invalid`);
+  }
+  const projectRole = parsedRole.data;
+
+  // Un productor no puede otorgar roles privilegiados (co-manager / aprobador
+  // cliente) ni agregar usuarios fuera de su ámbito.
+  if (!isMaster(me.kind)) {
+    if (PRIVILEGED_PROJECT_ROLES.includes(projectRole)) {
+      redirect(`/app/projects/${projectId}?error=denied_role`);
+    }
+    const inScope = await producerCanManageUser(me.id, userId);
+    if (!inScope) redirect(`/app/projects/${projectId}?error=denied_scope`);
+  }
 
   await prisma.projectMember
     .create({
@@ -79,7 +105,7 @@ async function addMember(formData: FormData) {
       projectId,
       type: "MEMBER_ADDED",
       summary: `Miembro agregado con rol ${PROJECT_ROLE_LABELS[projectRole]}`,
-      actorId: (await prisma.user.findFirst({ where: { id: userId } }))?.id,
+      actorId: me.id,
     },
   });
 
@@ -176,6 +202,12 @@ export default async function ProjectDetailPage(props: {
   const isManager = await canManageProject(me.id, me.role, id);
   await canApproveAsClient(me.id, id);
 
+  // Para agregar miembros, un manager no-master solo ve usuarios de su ámbito
+  // (no enumera todos los usuarios del sistema).
+  const eligibleWhere = isMaster(me.kind)
+    ? { active: true }
+    : { AND: [{ active: true }, await producerScopedUserWhere(me.id)] };
+
   const [project, eligibleUsers] = await Promise.all([
     prisma.project.findUnique({
       where: { id },
@@ -213,7 +245,7 @@ export default async function ProjectDetailPage(props: {
       },
     }),
     prisma.user.findMany({
-      where: { active: true },
+      where: eligibleWhere,
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),

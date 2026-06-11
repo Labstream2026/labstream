@@ -36,8 +36,16 @@ const newUserSchema = z.object({
   password: z.string().min(8).max(120),
   orgId: z.string().optional(),
   projectId: z.string().optional(),
-  projectRole: z.string().optional(),
+  projectRole: z.nativeEnum(ProjectRole).optional(),
 });
+
+/** Roles que conceden poder de gestión o de aprobación-cliente: solo el master
+ *  (ADMIN) puede otorgarlos al crear usuarios. */
+const PRIVILEGED_PROJECT_ROLES: ProjectRole[] = [
+  ProjectRole.EXEC_PRODUCER,
+  ProjectRole.PRODUCER,
+  ProjectRole.CLIENT_LEAD,
+];
 
 async function createUser(formData: FormData) {
   "use server";
@@ -121,7 +129,11 @@ async function createUser(formData: FormData) {
     parsed.data.projectId &&
     parsed.data.projectRole
   ) {
-    const role = parsed.data.projectRole as ProjectRole;
+    const role = parsed.data.projectRole;
+    // Un productor no puede crear co-managers ni aprobadores-cliente sintéticos.
+    if (!meIsMaster && PRIVILEGED_PROJECT_ROLES.includes(role)) {
+      redirect("/app/users?error=denied_role");
+    }
     await prisma.projectMember
       .create({
         data: {
@@ -297,6 +309,9 @@ export default async function UsersPage(props: {
       )}
       {sp.error === "denied_scope" && (
         <Banner kind="error" text="No puedes asignar usuarios a esa organización o proyecto." />
+      )}
+      {sp.error === "denied_role" && (
+        <Banner kind="error" text="No tienes permiso para asignar ese rol de proyecto." />
       )}
       {sp.error === "denied_target" && (
         <Banner kind="error" text="No tienes permiso para gestionar a ese usuario." />

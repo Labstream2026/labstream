@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { ProposalStatus } from "@prisma/client";
 
 // ─── Tipos de las estructuras JSON de una propuesta ──────────────────
@@ -102,7 +103,9 @@ export function makeProposalSlug(seed: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
-  // Sufijo aleatorio para que el link no sea adivinable.
-  const rand = Math.random().toString(36).slice(2, 8);
+  // Sufijo aleatorio CRIPTOGRÁFICO: la propuesta pública no tiene auth, así que
+  // el slug ES el control de acceso a datos confidenciales (presupuesto, cliente).
+  // 12 chars base64url (~72 bits) — no adivinable ni enumerable.
+  const rand = randomBytes(9).toString("base64url");
   return base ? `${base}-${rand}` : rand;
 }

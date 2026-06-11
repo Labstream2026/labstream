@@ -59,6 +59,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id as string;
         token.role = (user as { role: CmsRole }).role;
         token.kind = (user as { kind: UserKind }).kind;
+        token.active = true;
+        token.refreshedAt = Date.now();
+        return token;
+      }
+      // Refresco periódico desde la BD (máx cada 60s) para que la
+      // desactivación y la degradación de rol surtan efecto sin esperar a que
+      // caduque el JWT. Sin esto, un usuario desactivado conserva acceso.
+      const now = Date.now();
+      if (!token.refreshedAt || now - token.refreshedAt > 60_000) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { active: true, kind: true, role: true },
+        });
+        token.active = Boolean(dbUser?.active);
+        if (dbUser) {
+          token.kind = dbUser.kind;
+          token.role = dbUser.role;
+        }
+        token.refreshedAt = now;
       }
       return token;
     },
@@ -67,6 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as CmsRole;
         session.user.kind = token.kind as UserKind;
+        session.user.active = token.active !== false;
       }
       return session;
     },
