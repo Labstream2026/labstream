@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AssetSource } from "@prisma/client";
 import { canAccessCms } from "@/lib/cms-guard";
+import { publicBase } from "@/lib/public-url";
 import {
   uploadFile,
   isBlobConfigured,
@@ -11,9 +12,10 @@ import {
 } from "@/lib/blob-storage";
 
 export async function POST(req: Request) {
+  const base = publicBase(req);
   const session = await auth();
   if (!session?.user) {
-    return NextResponse.redirect(new URL("/cms/login", req.url));
+    return NextResponse.redirect(new URL("/cms/login", base));
   }
   if (!canAccessCms(session.user.kind)) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
     formData = await req.formData();
   } catch {
     return NextResponse.redirect(
-      new URL("/cms/assets?error=upload_failed", req.url),
+      new URL("/cms/assets?error=upload_failed", base),
     );
   }
 
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
     return isJsonResponse
       ? NextResponse.json({ ok: false, error: "no_file" }, { status: 400 })
       : NextResponse.redirect(
-          new URL("/cms/assets?error=upload_failed", req.url),
+          new URL("/cms/assets?error=upload_failed", base),
         );
   }
 
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
     return isJsonResponse
       ? NextResponse.json({ ok: false, error: "too_large" }, { status: 400 })
       : NextResponse.redirect(
-          new URL("/cms/assets?error=upload_failed", req.url),
+          new URL("/cms/assets?error=upload_failed", base),
         );
   }
 
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     return isJsonResponse
       ? NextResponse.json({ ok: false, error: "bad_type" }, { status: 400 })
       : NextResponse.redirect(
-          new URL("/cms/assets?error=upload_failed", req.url),
+          new URL("/cms/assets?error=upload_failed", base),
         );
   }
 
@@ -92,7 +94,7 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.redirect(
-    new URL("/cms/assets?ok=uploaded", req.url),
+    new URL("/cms/assets?ok=uploaded", base),
     303,
   );
 }

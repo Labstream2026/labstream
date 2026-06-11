@@ -75,6 +75,11 @@ export function CmsShell({
       <nav className="flex flex-col gap-0.5 text-[14px]">
         <NavLink href="/cms" label="Dashboard" active={pathname === "/cms"} />
         <NavLink
+          href="/cms/proposals"
+          label="Propuestas"
+          active={pathname.startsWith("/cms/proposals")}
+        />
+        <NavLink
           href="/cms/leads"
           label="Mensajes recibidos"
           active={pathname.startsWith("/cms/leads")}

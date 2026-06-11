@@ -145,6 +145,14 @@ enum ApprovalStage {
   CLIENT            // cliente da OK final
 }
 
+enum ProposalStatus {
+  DRAFT             // armándose, aún no se comparte
+  SENT              // enviada / link compartido con el cliente
+  ACCEPTED          // el cliente la aceptó
+  DECLINED          // el cliente la rechazó
+  EXPIRED           // venció la validez
+}
+
 enum ApprovalDecision {
   APPROVED
   CHANGES_REQUESTED
@@ -185,6 +193,7 @@ model User {
   commentsResolved   Comment[]            @relation("CommentResolver")
   reviewLinksCreated ReviewLink[]         @relation("ReviewLinkCreator")
   activityActor      ActivityLog[]        @relation("ActivityActor")
+  proposalsCreated   Proposal[]           @relation("ProposalCreatedBy")
 
   @@index([email])
   @@index([role])
@@ -864,4 +873,67 @@ model Lead {
 
   @@index([status, createdAt])
   @@index([email])
+}
+
+// ─── Propuestas comerciales ──────────────────────────────────────
+// Documento de venta que el productor arma y comparte con el cliente
+// en una URL pública (/propuesta/[slug]). Incluye historia/track record,
+// tratamiento creativo, cronograma+entregables y presupuesto.
+
+model Proposal {
+  id            String         @id @default(cuid())
+  slug          String         @unique          // token público para /propuesta/[slug]
+  code          String?                          // legible: PROP-2026-001
+  status        ProposalStatus @default(DRAFT)
+
+  // Cabecera / destinatario
+  title         String                           // "Comercial de marca 2026"
+  clientName    String                           // "PepsiCo"
+  clientContact String?                          // "Marta Salinas"
+  clientEmail   String?
+  preparedBy    String?                          // "Lucía Pérez · Labstream"
+
+  // Portada (hero)
+  coverImageUrl String?
+  tagline       String?                          // subtítulo grande del hero
+  intro         String?        @db.Text          // carta / párrafo de apertura
+
+  // Historia / track record de Labstream
+  aboutHeading  String?
+  aboutBody     String?        @db.Text
+  stats         Json?                            // [{ value, label }]
+  selectedWork  Json?                            // [{ title, client, imageUrl }]
+
+  // Tratamiento creativo
+  treatmentHeading  String?
+  treatmentBody     String?    @db.Text
+  treatmentSections Json?                        // [{ heading, body, imageUrl }]
+  moodboard         Json?                        // [{ url, alt }]
+  references        Json?                        // [{ title, url }]
+
+  // Cronograma + entregables
+  timeline      Json?                            // [{ phase, dateLabel, desc }]
+  deliverables  Json?                            // [{ item, detail, qty }]
+
+  // Presupuesto
+  currency      String         @default("COP")
+  budgetItems   Json?                            // [{ concept, detail, qty, unitPrice }]
+  budgetNote    String?        @db.Text
+  taxRatePct    Int?                             // 19 = IVA; null = sin impuesto
+  showPrices    Boolean        @default(true)
+
+  // Cierre
+  ctaHeading    String?
+  ctaBody       String?        @db.Text
+  validUntil    DateTime?
+  accentColor   String?                          // override de marca opcional (#hex)
+
+  draft         Json?                            // borrador en vivo (consistente con el resto)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdById   String?
+  createdBy     User?          @relation("ProposalCreatedBy", fields: [createdById], references: [id])
+
+  @@index([slug])
+  @@index([status])
 }

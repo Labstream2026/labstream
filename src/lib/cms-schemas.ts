@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { PortfolioCategory, BlogPostStatus, LeadStatus } from "@prisma/client";
+import {
+  PortfolioCategory,
+  BlogPostStatus,
+  LeadStatus,
+  ProposalStatus,
+} from "@prisma/client";
 
 // ─── Reusable atoms ────────────────────────────────────────────────
 
@@ -55,6 +60,13 @@ const intOrNull = z.preprocess(
 );
 
 const checkbox = z.preprocess((v) => v === "on" || v === true, z.boolean());
+
+/** Parses an <input type="date"> value to a Date, or null if empty/invalid. */
+const dateOrNull = z.preprocess((v) => {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}, z.date().nullable());
 
 /** Parses a JSON array from a string field; returns [] on any failure. */
 const jsonArray = z.preprocess(
@@ -141,6 +153,59 @@ export const aboutSchema = z.object({
 export const leadStatusSchema = z.object({
   id: required("El id"),
   status: z.nativeEnum(LeadStatus),
+});
+
+export const proposalCreateSchema = z.object({
+  title: required("El título"),
+  clientName: required("El nombre del cliente"),
+  code: optionalString,
+});
+
+export const proposalSchema = z.object({
+  // Cabecera
+  title: required("El título"),
+  slug,
+  code: optionalString,
+  status: z.nativeEnum(ProposalStatus).default(ProposalStatus.DRAFT),
+  clientName: required("El nombre del cliente"),
+  clientContact: optionalString,
+  clientEmail: optionalString,
+  preparedBy: optionalString,
+
+  // Portada
+  coverImageUrl: optionalString,
+  tagline: optionalString,
+  intro: optionalString,
+
+  // Historia / track record
+  aboutHeading: optionalString,
+  aboutBody: optionalString,
+  stats: jsonArray,
+  selectedWork: jsonArray,
+
+  // Tratamiento creativo
+  treatmentHeading: optionalString,
+  treatmentBody: optionalString,
+  treatmentSections: jsonArray,
+  moodboard: jsonArray,
+  references: jsonArray,
+
+  // Cronograma + entregables
+  timeline: jsonArray,
+  deliverables: jsonArray,
+
+  // Presupuesto
+  currency: trimmedString.default("COP"),
+  budgetItems: jsonArray,
+  budgetNote: optionalString,
+  taxRatePct: intOrNull,
+  showPrices: checkbox,
+
+  // Cierre
+  ctaHeading: optionalString,
+  ctaBody: optionalString,
+  validUntil: dateOrNull,
+  accentColor: optionalString,
 });
 
 // ─── Helper to extract errors → field-name map ──────────────────────
