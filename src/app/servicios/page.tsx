@@ -27,7 +27,7 @@ export default async function ServiciosPage() {
       <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2400&q=80"
+          src="/media/location.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"

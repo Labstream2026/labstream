@@ -92,7 +92,7 @@ async function seedCms() {
           secondaryLabel: "Ver Showreel",
           secondaryHref: "#",
           backgroundImage:
-            "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
+            "/media/hero-cinema.jpg",
           backgroundVideo: "",
           overlayOpacity: 65,
         },
@@ -119,22 +119,22 @@ async function seedCms() {
           heading: "Algunos proyectos recientes",
           slides: [
             {
-              url: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
+              url: "/media/set-produccion.jpg",
               alt: "Producción audiovisual",
               caption: "Comercial · Marca global · 2025",
             },
             {
-              url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
+              url: "/media/editorial.jpg",
               alt: "Sesión de fotografía",
               caption: "Editorial de marca · 2025",
             },
             {
-              url: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=2000&q=80",
+              url: "/media/streaming.jpg",
               alt: "Streaming en vivo",
               caption: "Evento corporativo · multicámara · 2024",
             },
             {
-              url: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
+              url: "/media/location.jpg",
               alt: "Locación cinematográfica",
               caption: "Documental · 2024",
             },
@@ -191,8 +191,8 @@ async function seedCms() {
     data: [
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=400&q=70",
+        url: "/media/hero-cinema.jpg",
+        thumbnailUrl: "/media/hero-cinema.jpg",
         filename: "Hero · Cámara cinema",
         alt: "Cámara cinematográfica en set",
         storage: "external",
@@ -200,8 +200,8 @@ async function seedCms() {
       },
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=400&q=70",
+        url: "/media/set-produccion.jpg",
+        thumbnailUrl: "/media/set-produccion.jpg",
         filename: "Producción · Marca global",
         alt: "Producción audiovisual en set",
         storage: "external",
@@ -209,8 +209,8 @@ async function seedCms() {
       },
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=400&q=70",
+        url: "/media/editorial.jpg",
+        thumbnailUrl: "/media/editorial.jpg",
         filename: "Editorial · Sesión fotográfica",
         alt: "Sesión de fotografía editorial",
         storage: "external",
@@ -218,8 +218,8 @@ async function seedCms() {
       },
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=2000&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=400&q=70",
+        url: "/media/streaming.jpg",
+        thumbnailUrl: "/media/streaming.jpg",
         filename: "Streaming · Multicámara",
         alt: "Setup de streaming multicámara",
         storage: "external",
@@ -227,8 +227,8 @@ async function seedCms() {
       },
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=400&q=70",
+        url: "/media/location.jpg",
+        thumbnailUrl: "/media/location.jpg",
         filename: "Documental · Locación",
         alt: "Locación cinematográfica",
         storage: "external",
@@ -236,8 +236,8 @@ async function seedCms() {
       },
       {
         source: AssetSource.URL,
-        url: "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=2000&q=80",
-        thumbnailUrl: "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=400&q=70",
+        url: "/media/color-grading.jpg",
+        thumbnailUrl: "/media/color-grading.jpg",
         filename: "Post-producción · Color",
         alt: "Estación de color grading",
         storage: "external",

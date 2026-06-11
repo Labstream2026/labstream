@@ -18,9 +18,8 @@ export const HOME_DEFAULTS = {
   heroCtaPrimaryHref: "/contacto",
   heroCtaSecondaryLabel: "Ver showreel",
   heroCtaSecondaryHref: "/portafolio",
-  heroBackgroundImage:
-    "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
-  heroBackgroundVideo: "https://assets.mixkit.co/videos/4842/4842-720.mp4",
+  heroBackgroundImage: "/media/hero-cinema.jpg",
+  heroBackgroundVideo: "/media/hero.mp4",
   stats: [
     { value: "12+", label: "Años de experiencia" },
     { value: "340", label: "Proyectos entregados" },

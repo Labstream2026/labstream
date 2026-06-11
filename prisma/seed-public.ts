@@ -15,51 +15,33 @@ import {
 const prisma = new PrismaClient();
 
 // Imágenes Unsplash audiovisual de alta calidad
+// Imágenes servidas localmente desde la app (carpeta public/media → ruta
+// /media/...). Antes apuntaban a Unsplash/Mixkit; ahora viven en el NAS para
+// no depender de enlaces externos que pueden romperse o cambiar.
 const IMG = {
-  cinema:
-    "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
-  set: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
-  editorial:
-    "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
-  streaming:
-    "https://images.unsplash.com/photo-1518930259200-3e5f1b3c0f5e?auto=format&fit=crop&w=2000&q=80",
-  location:
-    "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
-  color:
-    "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=2000&q=80",
-  director:
-    "https://images.unsplash.com/photo-1503095396549-807759245b35?auto=format&fit=crop&w=2000&q=80",
-  camera:
-    "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=2000&q=80",
-  studio:
-    "https://images.unsplash.com/photo-1496024840928-4c417adf211d?auto=format&fit=crop&w=2000&q=80",
-  cameraGear:
-    "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=2000&q=80",
-  productPhoto:
-    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=2000&q=80",
-  fashion:
-    "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=2000&q=80",
-  concert:
-    "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=2000&q=80",
-  conference:
-    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=2000&q=80",
-  edit:
-    "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=2000&q=80",
-  drone:
-    "https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=2000&q=80",
+  cinema: "/media/hero-cinema.jpg",
+  set: "/media/set-produccion.jpg",
+  editorial: "/media/editorial.jpg",
+  streaming: "/media/streaming.jpg",
+  location: "/media/location.jpg",
+  color: "/media/color-grading.jpg",
+  director: "/media/director.jpg",
+  camera: "/media/camera.jpg",
+  studio: "/media/studio.jpg",
+  cameraGear: "/media/camera-gear.jpg",
+  productPhoto: "/media/product.jpg",
+  fashion: "/media/fashion.jpg",
+  concert: "/media/concert.jpg",
+  conference: "/media/conference.jpg",
+  edit: "/media/edit.jpg",
+  drone: "/media/drone.jpg",
   // Equipo (fotos genéricas)
-  person1:
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80",
-  person2:
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
-  person3:
-    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=600&q=80",
-  person4:
-    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=600&q=80",
-  person5:
-    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80",
-  person6:
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+  person1: "/media/team-1.jpg",
+  person2: "/media/team-2.jpg",
+  person3: "/media/team-3.jpg",
+  person4: "/media/team-4.jpg",
+  person5: "/media/team-5.jpg",
+  person6: "/media/team-6.jpg",
 };
 
 async function main() {
@@ -749,8 +731,8 @@ async function seedHome() {
       heroCtaSecondaryLabel: "Ver showreel",
       heroCtaSecondaryHref: "/portafolio",
       heroBackgroundImage:
-        "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
-      heroBackgroundVideo: "https://assets.mixkit.co/videos/4842/4842-720.mp4",
+        "/media/hero-cinema.jpg",
+      heroBackgroundVideo: "/media/hero.mp4",
       stats: [
         { value: "12+", label: "Años de experiencia" },
         { value: "340", label: "Proyectos entregados" },

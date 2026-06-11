@@ -36,7 +36,7 @@ export default async function ContactoPage() {
       <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80"
+          src="/media/hero-cinema.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"

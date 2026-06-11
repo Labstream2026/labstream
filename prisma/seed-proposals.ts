@@ -10,20 +10,20 @@ const prisma = new PrismaClient();
 
 const IMG = {
   cinema:
-    "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=2400&q=80",
-  set: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2000&q=80",
+    "/media/hero-cinema.jpg",
+  set: "/media/set-produccion.jpg",
   editorial:
-    "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2000&q=80",
+    "/media/editorial.jpg",
   color:
-    "https://images.unsplash.com/photo-1505739679850-7adc7b8c4dab?auto=format&fit=crop&w=2000&q=80",
+    "/media/color-grading.jpg",
   concert:
-    "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=2000&q=80",
+    "/media/concert.jpg",
   cameraGear:
-    "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=2000&q=80",
+    "/media/camera-gear.jpg",
   studio:
-    "https://images.unsplash.com/photo-1496024840928-4c417adf211d?auto=format&fit=crop&w=2000&q=80",
+    "/media/studio.jpg",
   location:
-    "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=2000&q=80",
+    "/media/location.jpg",
 };
 
 async function main() {

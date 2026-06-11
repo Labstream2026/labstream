@@ -41,7 +41,7 @@ export default async function NosotrosPage(props: {
       <section className="relative overflow-hidden px-6 pb-20 pt-32 md:pt-40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=2400&q=80"
+          src="/media/set-produccion.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"

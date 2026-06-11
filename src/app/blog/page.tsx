@@ -47,7 +47,7 @@ export default async function BlogPage(props: {
       <section className="relative overflow-hidden pb-12 pt-32 md:pt-40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=2400&q=80"
+          src="/media/blog-hero.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
           referrerPolicy="no-referrer"
