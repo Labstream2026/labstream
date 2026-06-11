@@ -65,7 +65,7 @@ async function deleteProposal(formData: FormData) {
     redirect("/cms/proposals");
   }
   const id = String(formData.get("id") ?? "");
-  await prisma.proposal.delete({ where: { id } });
+  await prisma.proposal.delete({ where: { id } }).catch(() => null);
   revalidatePath("/cms/proposals");
   await setSuccess("Propuesta eliminada.");
   redirect("/cms/proposals");
@@ -77,7 +77,11 @@ export default async function ProposalsListPage(props: {
   await requireCmsUser();
   const sp = await props.searchParams;
   const q = sp.q?.trim() ?? "";
-  const status = sp.status as ProposalStatus | undefined;
+  // Validar el filtro contra el enum (evita errores de Prisma con valores raros).
+  const status =
+    sp.status && (Object.values(ProposalStatus) as string[]).includes(sp.status)
+      ? (sp.status as ProposalStatus)
+      : undefined;
 
   const proposals = await prisma.proposal.findMany({
     where: {

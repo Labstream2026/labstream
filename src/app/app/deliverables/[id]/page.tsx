@@ -42,6 +42,15 @@ async function submitVersion(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!externalUrl) return;
+  // Validar que sea una URL absoluta (se pasa a detectEmbedKind / visores).
+  try {
+    const u = new URL(externalUrl);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      redirect(`/app/deliverables/${deliverableId}?denied=1`);
+    }
+  } catch {
+    redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  }
 
   const deliverable = await prisma.deliverable.findUnique({
     where: { id: deliverableId },
@@ -114,6 +123,16 @@ async function approveInternal(formData: FormData) {
     deliverable.projectId,
   );
   if (!canManage) redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  // No re-pre-aprobar un entregable ya aprobado por el cliente (es final).
+  if (deliverable.status === DeliverableStatus.APPROVED) {
+    redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  }
+  if (
+    decision !== ApprovalDecision.APPROVED &&
+    decision !== ApprovalDecision.CHANGES_REQUESTED
+  ) {
+    redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  }
 
   await prisma.approval.create({
     data: {
@@ -192,6 +211,17 @@ async function approveAsClient(formData: FormData) {
 
   const canApprove = await canApproveAsClient(me.id, deliverable.projectId);
   if (!canApprove) redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  // El cliente solo puede decidir cuando el entregable está esperándolo:
+  // evita saltarse la pre-aprobación interna (DRAFT/INTERNAL_REVIEW).
+  if (deliverable.status !== DeliverableStatus.CLIENT_REVIEW) {
+    redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  }
+  if (
+    decision !== ApprovalDecision.APPROVED &&
+    decision !== ApprovalDecision.CHANGES_REQUESTED
+  ) {
+    redirect(`/app/deliverables/${deliverableId}?denied=1`);
+  }
 
   await prisma.approval.create({
     data: {
