@@ -15,7 +15,7 @@ async function createProject(formData: FormData) {
     .replace(/[^A-Z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "");
   const clientOrgId = String(formData.get("clientOrgId") ?? "");
-  const producerOrgId = String(formData.get("producerOrgId") ?? "");
+  const producerUserId = String(formData.get("producerUserId") ?? "");
   const templateId = String(formData.get("templateId") ?? "") || null;
   const description = String(formData.get("description") ?? "").trim() || null;
   const startDateRaw = String(formData.get("startDate") ?? "");
@@ -23,9 +23,35 @@ async function createProject(formData: FormData) {
   const startDate = startDateRaw ? new Date(startDateRaw) : null;
   const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
 
-  if (!name || !code || !clientOrgId || !producerOrgId) {
+  if (!name || !code || !clientOrgId || !producerUserId) {
     redirect("/app/projects/new?error=invalid");
   }
+
+  // La productora es una persona (rol Productor). Para no romper el modelo de
+  // permisos/notificaciones (que opera por organización), garantizamos una
+  // organización-respaldo 1:1 para esa persona y la usamos como productora.
+  const producerUser = await prisma.user.findUnique({
+    where: { id: producerUserId },
+    select: { id: true, name: true, email: true, kind: true },
+  });
+  if (!producerUser || producerUser.kind !== "PRODUCER") {
+    redirect("/app/projects/new?error=invalid");
+  }
+  let producerOrg = await prisma.organization.findFirst({
+    where: { type: "PRODUCER", members: { some: { userId: producerUserId } } },
+    select: { id: true },
+  });
+  if (!producerOrg) {
+    producerOrg = await prisma.organization.create({
+      data: {
+        name: producerUser.name ?? producerUser.email,
+        type: "PRODUCER",
+        members: { create: { userId: producerUserId } },
+      },
+      select: { id: true },
+    });
+  }
+  const producerOrgId = producerOrg.id;
 
   const exists = await prisma.project.findUnique({ where: { code } });
   if (exists) redirect("/app/projects/new?error=exists");
@@ -102,9 +128,12 @@ export default async function NewProjectPage(props: {
       where: { type: "CLIENT" },
       orderBy: { name: "asc" },
     }),
-    prisma.organization.findMany({
-      where: { type: { in: ["PRODUCER", "INTERNAL"] } },
+    // La productora es una PERSONA (rol Productor), no una organización.
+    // Listamos las personas tipo Productor activas.
+    prisma.user.findMany({
+      where: { kind: "PRODUCER", active: true },
       orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true },
     }),
     prisma.projectTemplate.findMany({
       orderBy: { name: "asc" },
@@ -176,17 +205,26 @@ export default async function NewProjectPage(props: {
             Productora
           </span>
           <select
-            name="producerOrgId"
+            name="producerUserId"
             required
             className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white focus:border-orange/50 focus:outline-none"
           >
             <option value="">Selecciona…</option>
             {producers.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {p.name ?? p.email}
               </option>
             ))}
           </select>
+          {producers.length === 0 && (
+            <span className="text-[11px] text-yellow-400/80">
+              No hay personas tipo Productor. Crea una en{" "}
+              <a href="/app/users" className="underline">
+                Equipo · Personas
+              </a>
+              .
+            </span>
+          )}
         </label>
 
         <Field name="startDate" label="Fecha de inicio" type="date" />

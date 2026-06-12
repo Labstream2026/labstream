@@ -75,6 +75,21 @@ export function ReviewPlayer(props: Props) {
   const [useCors, setUseCors] = useState(true);
   const [canCaptureFrame, setCanCaptureFrame] = useState(true);
 
+  // ── Embeds (Vimeo/YouTube/Drive): seguimiento del segundo actual ──
+  const iframeElRef = useRef<HTMLIFrameElement>(null);
+  const embedProvider: "vimeo" | "youtube" | "other" | null =
+    props.player.kind === "iframe"
+      ? props.player.src.includes("vimeo.com")
+        ? "vimeo"
+        : props.player.src.includes("youtube")
+          ? "youtube"
+          : "other"
+      : null;
+  // Tiempo leído del embed (si su API responde) y tiempo manual (para Drive,
+  // que no expone API). Ambos en ms.
+  const [embedTimeMs, setEmbedTimeMs] = useState<number | null>(null);
+  const [manualTime, setManualTime] = useState(""); // formato "M:SS" o segundos
+
   // Tool state
   const [tool, setTool] = useState<Tool>("select");
   const [color, setColor] = useState<string>("#E8640C");
@@ -188,6 +203,73 @@ export function ReviewPlayer(props: Props) {
     };
   }, [props.player.kind, useCors]);
 
+  // Embed time tracking (Vimeo / YouTube) vía postMessage.
+  useEffect(() => {
+    if (props.player.kind !== "iframe") return;
+    if (embedProvider !== "vimeo" && embedProvider !== "youtube") return;
+
+    function onMsg(e: MessageEvent) {
+      try {
+        const data =
+          typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (!data || typeof data !== "object") return;
+        if (embedProvider === "vimeo") {
+          if (data.event === "playProgress" || data.method === "getCurrentTime") {
+            const sec = data.data?.seconds ?? data.value;
+            if (typeof sec === "number") setEmbedTimeMs(Math.round(sec * 1000));
+          }
+          if (data.event === "play") setPlaying(true);
+          if (data.event === "pause" || data.event === "finish") setPlaying(false);
+        } else if (embedProvider === "youtube") {
+          // La IFrame API manda "infoDelivery" con info.currentTime y playerState.
+          if (data.event === "infoDelivery" && data.info) {
+            if (typeof data.info.currentTime === "number")
+              setEmbedTimeMs(Math.round(data.info.currentTime * 1000));
+            if (typeof data.info.playerState === "number")
+              setPlaying(data.info.playerState === 1);
+          }
+        }
+      } catch {
+        /* mensajes no-JSON de otros orígenes: ignorar */
+      }
+    }
+    window.addEventListener("message", onMsg);
+
+    // Handshake: hay que (re)suscribirse periódicamente porque el iframe puede
+    // cargar después de montar.
+    const post = () => {
+      const win = iframeElRef.current?.contentWindow;
+      if (!win) return;
+      if (embedProvider === "vimeo") {
+        for (const ev of ["playProgress", "play", "pause", "finish"]) {
+          win.postMessage(
+            JSON.stringify({ method: "addEventListener", value: ev }),
+            "*",
+          );
+        }
+      } else {
+        win.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+      }
+    };
+    post();
+    const t = setInterval(post, 1200);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      clearInterval(t);
+    };
+  }, [props.player.kind, embedProvider]);
+
+  // Tiempo efectivo para comentar: video nativo → currentMs; embed → el tiempo
+  // leído de su API, o el que el usuario escribió a mano (Drive).
+  const manualMs = parseTimecode(manualTime);
+  // El tiempo escrito a mano tiene prioridad (override); si no, el de la API.
+  const effectiveTimeMs =
+    props.player.kind === "video" ? currentMs : manualMs ?? embedTimeMs ?? 0;
+  const hasTime =
+    props.player.kind === "video"
+      ? durationMs > 0
+      : manualMs != null || embedTimeMs != null;
+
   // Aspect ratio CSS
   const aspectRatio = aspect ? `${aspect.w} / ${aspect.h}` : "16 / 9";
   const isVertical = aspect ? aspect.h > aspect.w : false;
@@ -270,7 +352,7 @@ export function ReviewPlayer(props: Props) {
       // 2. Enviar comentario
       const payload: Record<string, unknown> = {
         body: body.trim(),
-        videoTimeMs: durationMs > 0 ? currentMs : undefined,
+        videoTimeMs: hasTime ? effectiveTimeMs : undefined,
       };
       if (!props.isLoggedIn) {
         payload.guestName = guestName.trim();
@@ -421,6 +503,7 @@ export function ReviewPlayer(props: Props) {
 
           {props.player.kind === "iframe" && (
             <iframe
+              ref={iframeElRef}
               src={props.player.src}
               className="h-full w-full"
               allow="autoplay; fullscreen; picture-in-picture"
@@ -602,10 +685,39 @@ export function ReviewPlayer(props: Props) {
         )}
 
         {props.player.kind === "iframe" && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-[12px] text-amber-200/85">
-            Video reproducido por embed (Drive privado / YouTube / Vimeo). Los comentarios funcionan, pero el dibujo y captura
-            de pantalla requieren un video reproducido directamente. Pídele al productor que active el modo &quot;streaming&quot;
-            si necesitas marcar visualmente.
+          <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12px] text-white/70">Comentar en el segundo</span>
+              <input
+                value={manualTime}
+                onChange={(e) => setManualTime(e.target.value)}
+                placeholder={embedTimeMs != null ? fmtShort(embedTimeMs) : "0:34"}
+                inputMode="numeric"
+                className="w-24 rounded-md border border-white/10 bg-black/30 px-2 py-1.5 text-center font-mono text-[13px] text-white focus:border-orange/50 focus:outline-none"
+              />
+              {embedTimeMs != null && (
+                <button
+                  type="button"
+                  onClick={() => setManualTime(fmtShort(embedTimeMs))}
+                  className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/75 hover:bg-white/10"
+                  title="Usar el segundo actual del video"
+                >
+                  ⏱ {fmtShort(embedTimeMs)}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setComposerOpen(true)}
+                className="ml-auto rounded-full bg-orange px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-orange/85"
+              >
+                + Comentar aquí
+              </button>
+            </div>
+            <p className="text-[11px] text-white/45">
+              {embedProvider === "vimeo" || embedProvider === "youtube"
+                ? "Pausa el video y pulsa ⏱ para tomar el segundo automáticamente, o escríbelo a mano. El dibujo/captura requieren el modo “streaming” (pídeselo al productor)."
+                : "Pausa el video, mira el segundo en el reproductor y escríbelo aquí. El dibujo/captura requieren el modo “streaming” — pídeselo al productor."}
+            </p>
           </div>
         )}
       </div>
@@ -657,7 +769,13 @@ export function ReviewPlayer(props: Props) {
           <div className="rounded-2xl border border-orange/40 bg-orange/[0.06] p-3">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-[12px] text-white/85">
-                @ <span className="font-mono text-orange">{fmt(currentMs)}</span>
+                {hasTime ? (
+                  <>
+                    @ <span className="font-mono text-orange">{fmt(effectiveTimeMs)}</span>
+                  </>
+                ) : (
+                  <span className="text-white/45">Sin marca de tiempo</span>
+                )}
                 {drawingActive && <span className="ml-2 text-[10px] text-white/45">+ dibujo</span>}
               </div>
               <button
@@ -926,4 +1044,25 @@ function fmt(ms: number): string {
   const s = totalSec % 60;
   const cs = Math.floor((ms % 1000) / 10);
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${cs.toString().padStart(2, "0")}`;
+}
+
+/** Formato corto "M:SS" sin centésimas. */
+function fmtShort(ms: number): string {
+  const totalSec = Math.round(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Convierte "M:SS", "MM:SS(.cc)" o segundos sueltos a ms. null si vacío/ inválido. */
+function parseTimecode(s: string): number | null {
+  const t = s.trim();
+  if (!t) return null;
+  if (/^\d+$/.test(t)) return parseInt(t, 10) * 1000; // solo segundos
+  const m = t.match(/^(\d+):([0-5]?\d)(?:\.(\d{1,2}))?$/);
+  if (!m) return null;
+  const min = parseInt(m[1], 10);
+  const sec = parseInt(m[2], 10);
+  const cs = m[3] ? parseInt(m[3].padEnd(2, "0"), 10) : 0;
+  return (min * 60 + sec) * 1000 + cs * 10;
 }

@@ -121,11 +121,15 @@ export function driveDirectDownloadUrl(fileId: string): string {
 }
 
 export function vimeoEmbedUrl(videoId: string): string {
-  return `https://player.vimeo.com/video/${videoId}`;
+  // api=1 habilita la API de postMessage (playProgress/pause) para leer el
+  // segundo actual del video desde la página de revisión.
+  return `https://player.vimeo.com/video/${videoId}?api=1`;
 }
 
 export function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}`;
+  // enablejsapi=1 habilita la IFrame API por postMessage (infoDelivery →
+  // currentTime) para leer el segundo actual desde la página de revisión.
+  return `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
 }
 
 // ─── API: listar contenidos de una carpeta ───────────────────────
