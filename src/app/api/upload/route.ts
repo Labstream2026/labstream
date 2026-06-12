@@ -59,25 +59,51 @@ export async function POST(req: Request) {
         );
   }
 
-  const stored = await uploadFile({
-    file,
-    filename: file.name,
-    prefix: "uploads",
-  });
-
-  const asset = await prisma.asset.create({
-    data: {
-      source: AssetSource.UPLOAD,
+  let stored;
+  try {
+    stored = await uploadFile({
+      file,
       filename: file.name,
-      mimeType: mime,
-      sizeBytes: file.size,
-      url: stored.url,
-      storage: stored.storage,
-      blobPath: stored.storage === "blob" ? stored.pathname : null,
-      alt,
-      uploadedById: session.user.id,
-    },
-  });
+      prefix: "uploads",
+    });
+  } catch (e) {
+    // Causa típica en el NAS: el bind mount de uploads no es escribible por el
+    // usuario del contenedor (EACCES). Devolvemos SIEMPRE JSON para que el
+    // cliente muestre un error claro en vez de romper en res.json().
+    console.error("[upload] storage write failed:", e);
+    return isJsonResponse
+      ? NextResponse.json(
+          { ok: false, error: "storage_failed" },
+          { status: 500 },
+        )
+      : NextResponse.redirect(
+          new URL("/cms/assets?error=upload_failed", base),
+        );
+  }
+
+  let asset;
+  try {
+    asset = await prisma.asset.create({
+      data: {
+        source: AssetSource.UPLOAD,
+        filename: file.name,
+        mimeType: mime,
+        sizeBytes: file.size,
+        url: stored.url,
+        storage: stored.storage,
+        blobPath: stored.storage === "blob" ? stored.pathname : null,
+        alt,
+        uploadedById: session.user.id,
+      },
+    });
+  } catch (e) {
+    console.error("[upload] db create failed:", e);
+    return isJsonResponse
+      ? NextResponse.json({ ok: false, error: "db_failed" }, { status: 500 })
+      : NextResponse.redirect(
+          new URL("/cms/assets?error=upload_failed", base),
+        );
+  }
 
   if (isJsonResponse) {
     return NextResponse.json({

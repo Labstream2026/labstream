@@ -25,6 +25,37 @@ type Props = {
 
 type Tab = "library" | "upload" | "url";
 
+/** Lee la respuesta como JSON sin romper si el cuerpo viene vacío o no es JSON. */
+async function safeJson(r: Response): Promise<Record<string, unknown>> {
+  const text = await r.text().catch(() => "");
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/** Traduce los códigos de error del API a un mensaje claro para el usuario. */
+function uploadErrorMessage(code: unknown, status: number): string {
+  switch (code) {
+    case "too_large":
+      return "El archivo es demasiado grande (máx. 50 MB).";
+    case "bad_type":
+      return "Tipo de archivo no permitido (usa JPG, PNG, WebP, MP4…).";
+    case "no_file":
+      return "No se seleccionó ningún archivo.";
+    case "forbidden":
+      return "No tienes permiso para subir archivos.";
+    case "storage_failed":
+      return "El servidor no pudo guardar el archivo (permisos de la carpeta de subidas en el NAS).";
+    case "db_failed":
+      return "El archivo se subió pero no se pudo registrar. Intenta de nuevo.";
+    default:
+      return `No se pudo subir (error ${status || "desconocido"}).`;
+  }
+}
+
 export function AssetPicker({
   open,
   onClose,
@@ -66,7 +97,7 @@ export function AssetPicker({
       if (search) params.set("q", search);
       if (filter !== "any") params.set("type", filter);
       const r = await fetch(`/api/assets?${params.toString()}`);
-      const j = await r.json();
+      const j = await safeJson(r);
       setAssets(j.assets ?? []);
     } finally {
       setLoading(false);
@@ -81,9 +112,11 @@ export function AssetPicker({
       fd.append("file", file);
       fd.append("json", "1");
       const r = await fetch("/api/upload", { method: "POST", body: fd });
-      const j = await r.json();
-      if (!j.ok) {
-        setUploadError(j.error ?? "Error al subir");
+      const j = await safeJson(r);
+      if (!r.ok || !j.ok) {
+        setUploadError(
+          uploadErrorMessage(j.error, r.status),
+        );
         return;
       }
       // Auto-pick
@@ -105,10 +138,12 @@ export function AssetPicker({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: externalUrl, alt: externalAlt }),
       });
-      const j = await r.json();
-      if (j.ok) {
+      const j = await safeJson(r);
+      if (r.ok && j.ok) {
         onPick({ url: j.asset.url, alt: externalAlt || undefined });
         onClose();
+      } else {
+        setUploadError(uploadErrorMessage(j.error, r.status));
       }
     } finally {
       setSavingExternal(false);
