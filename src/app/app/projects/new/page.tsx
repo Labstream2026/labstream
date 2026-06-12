@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ProjectStatus, PhaseStatus, TaskStatus } from "@prisma/client";
+import { ProjectStatus, PhaseStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireMaster } from "@/lib/app-guards";
 
@@ -95,7 +95,7 @@ async function createProject(formData: FormData) {
               phaseId: phase.id,
               title: tt.title,
               order: tt.order,
-              status: TaskStatus.TODO,
+              status: "TODO",
             },
           });
         }

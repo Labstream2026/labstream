@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
-  TaskStatus,
   PhaseStatus,
   ProjectStatus,
   ProjectRole,
@@ -32,19 +31,27 @@ const PRIVILEGED_PROJECT_ROLES: ProjectRole[] = [
   ProjectRole.CLIENT_LEAD,
 ];
 import { detectEmbedKind } from "@/lib/google-drive";
+import {
+  getTaskStages,
+  stagesByKey,
+  type TaskStageDTO,
+} from "@/lib/task-stages";
 import { StatusPill as UIStatusPill } from "@/components/app/ui/StatusPill";
 import { Avatar } from "@/components/app/ui/Avatar";
 
 async function updateTaskStatus(formData: FormData) {
   "use server";
   const taskId = String(formData.get("taskId") ?? "");
-  const status = String(formData.get("status") ?? TaskStatus.TODO) as TaskStatus;
+  const status = String(formData.get("status") ?? "TODO");
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { phase: { select: { projectId: true } } },
   });
   if (!task) return;
   await requireProjectManager(task.phase.projectId);
+  // El estado debe existir en TaskStage (editable).
+  const stage = await prisma.taskStage.findUnique({ where: { key: status } });
+  if (!stage) return;
   await prisma.task.update({ where: { id: taskId }, data: { status } });
   revalidatePath(`/app/projects/${task.phase.projectId}`);
 }
@@ -208,7 +215,7 @@ export default async function ProjectDetailPage(props: {
     ? { active: true }
     : { AND: [{ active: true }, await producerScopedUserWhere(me.id)] };
 
-  const [project, eligibleUsers] = await Promise.all([
+  const [project, eligibleUsers, taskStages] = await Promise.all([
     prisma.project.findUnique({
       where: { id },
       include: {
@@ -249,6 +256,7 @@ export default async function ProjectDetailPage(props: {
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
+    getTaskStages(),
   ]);
 
   if (!project) notFound();
@@ -384,6 +392,7 @@ export default async function ProjectDetailPage(props: {
                 isManager={isManager}
                 onAddTask={addTask}
                 onUpdateStatus={updateTaskStatus}
+                stages={taskStages}
               />
             ))
           )}
@@ -610,6 +619,7 @@ function PhaseBlock({
   isManager,
   onAddTask,
   onUpdateStatus,
+  stages,
 }: {
   phase: {
     id: string;
@@ -619,14 +629,16 @@ function PhaseBlock({
     tasks: {
       id: string;
       title: string;
-      status: TaskStatus;
+      status: string;
       assignees: { user: { name: string | null } }[];
     }[];
   };
   isManager: boolean;
   onAddTask: (formData: FormData) => Promise<void>;
   onUpdateStatus: (formData: FormData) => Promise<void>;
+  stages: TaskStageDTO[];
 }) {
+  const stageMap = stagesByKey(stages);
   return (
     <div className="lg rounded-2xl p-5">
       <div className="mb-3 flex items-center gap-3">
@@ -664,11 +676,11 @@ function PhaseBlock({
                     defaultValue={t.status}
                     className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-white"
                   >
-                    <option value={TaskStatus.TODO}>Por hacer</option>
-                    <option value={TaskStatus.DOING}>En curso</option>
-                    <option value={TaskStatus.REVIEW}>Revisión</option>
-                    <option value={TaskStatus.DONE}>Listo</option>
-                    <option value={TaskStatus.BLOCKED}>Bloqueado</option>
+                    {stages.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="submit"
@@ -678,7 +690,16 @@ function PhaseBlock({
                   </button>
                 </form>
               ) : (
-                <UIStatusPill status={t.status} size="sm" />
+                (() => {
+                  const st = stageMap.get(t.status);
+                  return (
+                    <UIStatusPill
+                      status={t.status}
+                      size="sm"
+                      override={st ? { label: st.label, color: st.color } : undefined}
+                    />
+                  );
+                })()
               )}
             </li>
           ))}

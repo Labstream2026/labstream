@@ -30,6 +30,7 @@ const NAV_BY_ROLE: Record<
     { href: "/app/users", label: "Personas", section: "admin" },
     { href: "/app/orgs", label: "Organizaciones", section: "admin" },
     { href: "/app/templates", label: "Plantillas", section: "admin" },
+    { href: "/app/stages", label: "Estados de tareas", section: "admin" },
     { href: "/cms", label: "Ir al CMS", section: "admin" },
   ],
   PRODUCER: [

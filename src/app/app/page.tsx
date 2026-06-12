@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  ProjectStatus,
-  DeliverableStatus,
-  TaskStatus,
-} from "@prisma/client";
+import { ProjectStatus, DeliverableStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   requireAppUser,
@@ -11,6 +7,11 @@ import {
   listVisibleProjectIds,
   DELIVERABLE_KIND_LABELS,
 } from "@/lib/app-guards";
+import {
+  getTaskStages,
+  stagesByKey,
+  pendingStageKeys,
+} from "@/lib/task-stages";
 import { thumbnailFromVersion } from "@/lib/thumbnails";
 import { getProjectStatsMap, type ProjectStats } from "@/lib/project-stats";
 import { AvatarStack } from "@/components/app/ui/Avatar";
@@ -180,10 +181,12 @@ async function TeamDashboard({
   access: { all: true } | { all: false; ids: string[] };
   name: string;
 }) {
+  const taskStages = await getTaskStages();
+  const stageMap = stagesByKey(taskStages);
   const myTasks = await prisma.task.findMany({
     where: {
       assignees: { some: { userId } },
-      status: { in: [TaskStatus.TODO, TaskStatus.DOING, TaskStatus.REVIEW] },
+      status: { in: pendingStageKeys(taskStages) },
     },
     include: {
       phase: {
@@ -259,7 +262,16 @@ async function TeamDashboard({
                   </td>
                   <td className="px-5 py-3 text-white/70">{t.phase.name}</td>
                   <td className="px-5 py-3">
-                    <UIStatusPill status={t.status} size="sm" />
+                    {(() => {
+                      const st = stageMap.get(t.status);
+                      return (
+                        <UIStatusPill
+                          status={t.status}
+                          size="sm"
+                          override={st ? { label: st.label, color: st.color } : undefined}
+                        />
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

@@ -1,29 +1,27 @@
 import Link from "next/link";
-import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAppUser, STATUS_LABELS } from "@/lib/app-guards";
+import { requireAppUser } from "@/lib/app-guards";
+import { getTaskStages } from "@/lib/task-stages";
 
 export default async function TasksPage() {
   const me = await requireAppUser();
 
-  const tasks = await prisma.task.findMany({
-    where: { assignees: { some: { userId: me.id } } },
-    include: {
-      phase: {
-        include: { project: { select: { id: true, name: true, code: true } } },
+  const [tasks, stages] = await Promise.all([
+    prisma.task.findMany({
+      where: { assignees: { some: { userId: me.id } } },
+      include: {
+        phase: {
+          include: { project: { select: { id: true, name: true, code: true } } },
+        },
       },
-    },
-    orderBy: [{ status: "asc" }, { dueDate: "asc" }, { updatedAt: "desc" }],
-  });
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { updatedAt: "desc" }],
+    }),
+    getTaskStages(),
+  ]);
 
-  const grouped: Record<string, typeof tasks> = {
-    [TaskStatus.TODO]: [],
-    [TaskStatus.DOING]: [],
-    [TaskStatus.REVIEW]: [],
-    [TaskStatus.DONE]: [],
-    [TaskStatus.BLOCKED]: [],
-  };
-  for (const t of tasks) grouped[t.status].push(t);
+  const grouped: Record<string, typeof tasks> = {};
+  for (const s of stages) grouped[s.key] = [];
+  for (const t of tasks) (grouped[t.status] ??= []).push(t);
 
   return (
     <div className="px-5 py-6 md:px-10 md:py-10">
@@ -45,24 +43,23 @@ export default async function TasksPage() {
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          {[
-            TaskStatus.TODO,
-            TaskStatus.DOING,
-            TaskStatus.REVIEW,
-            TaskStatus.DONE,
-            TaskStatus.BLOCKED,
-          ].map((s) => (
-            grouped[s].length > 0 && (
-              <div key={s} className="lg flex flex-col gap-2 rounded-2xl p-4">
+          {stages.map((s) => (
+            (grouped[s.key]?.length ?? 0) > 0 && (
+              <div key={s.key} className="lg flex flex-col gap-2 rounded-2xl p-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-[13px] font-semibold uppercase tracking-wider text-white/70">
-                    {STATUS_LABELS[s]}
+                  <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-white/70">
+                    <span
+                      aria-hidden
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ background: s.color }}
+                    />
+                    {s.label}
                   </h2>
                   <span className="text-[11px] text-white/45">
-                    {grouped[s].length}
+                    {grouped[s.key].length}
                   </span>
                 </div>
-                {grouped[s].map((t) => (
+                {grouped[s.key].map((t) => (
                   <Link
                     key={t.id}
                     href={`/app/projects/${t.phase.project.id}`}

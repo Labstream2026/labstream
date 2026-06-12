@@ -9,7 +9,7 @@ import {
   ProjectRole,
   PhaseType,
   PhaseStatus,
-  TaskStatus,
+
   DeliverableKind,
   DeliverableStatus,
   ApprovalStage,
@@ -707,7 +707,7 @@ async function seedWebapp() {
             phaseId: phase.id,
             title: tt.title,
             order: tt.order,
-            status: TaskStatus.TODO,
+            status: "TODO",
           },
         });
       }

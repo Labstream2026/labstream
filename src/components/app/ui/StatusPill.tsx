@@ -2,19 +2,24 @@ import type {
   DeliverableStatus,
   ProjectStatus,
   PhaseStatus,
-  TaskStatus,
 } from "@prisma/client";
 
 /**
  * Pill de estado consistente con icono + color + texto en español.
- * Reusable en proyectos, entregables, fases y tareas.
+ * Reusable en proyectos, entregables, fases y tareas. Las tareas usan estados
+ * EDITABLES (TaskStage): se renderizan con `override` (label+color propios); las
+ * claves por defecto siguen aquí como respaldo.
  */
 
 type Status =
   | DeliverableStatus
   | ProjectStatus
   | PhaseStatus
-  | TaskStatus
+  | "TODO"
+  | "DOING"
+  | "REVIEW"
+  | "DONE"
+  | "BLOCKED"
   | "EXPIRED"
   | "REVOKED";
 
@@ -63,18 +68,39 @@ const SIZES: Record<Size, { px: string; text: string; iconSize: string }> = {
   lg: { px: "px-3.5 py-1.5", text: "text-[13.5px]", iconSize: "text-[12px]" },
 };
 
+/** Deriva un estilo de pill a partir de un solo color (para estados de tarea
+ *  personalizables, cuyo color lo define el usuario). */
+function styleFromColor(hex: string, label: string): Style {
+  const h = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#9aa0a6";
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  return {
+    bg: `rgba(${r}, ${g}, ${b}, 0.14)`,
+    border: `rgba(${r}, ${g}, ${b}, 0.34)`,
+    color: h,
+    icon: "●",
+    label,
+  };
+}
+
 export function StatusPill({
   status,
   size = "md",
   showIcon = true,
   className = "",
+  override,
 }: {
-  status: Status;
+  status: string;
   size?: Size;
   showIcon?: boolean;
   className?: string;
+  /** Para estados de tarea editables: color+label propios (no del enum). */
+  override?: { label: string; color: string };
 }) {
-  const s = STYLES[status];
+  const s = override
+    ? styleFromColor(override.color, override.label)
+    : STYLES[status as Status];
   if (!s) return null;
   const sz = SIZES[size];
 
