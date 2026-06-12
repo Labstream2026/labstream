@@ -4,7 +4,9 @@ type LogoProps = {
 };
 
 export function Logo({ size = 1, dark = false }: LogoProps) {
-  const col = dark ? "#111" : "#fff";
+  // `currentColor` hace que el wordmark siga el color de texto del contexto
+  // (blanco sobre fondos oscuros, oscuro en modo claro de la webapp/CMS).
+  const col = dark ? "#111" : "currentColor";
   return (
     <svg
       width={130 * size}

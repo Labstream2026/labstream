@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { CmsRole, UserKind } from "@prisma/client";
@@ -48,6 +48,9 @@ export default async function CmsLayout({
     await signOut({ redirectTo: "/cms/login" });
   }
 
+  const initialTheme =
+    (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
+
   return (
     <>
       <CmsShell
@@ -55,6 +58,7 @@ export default async function CmsLayout({
         isSuper={isSuper}
         isMaster={isMaster}
         signOut={handleSignOut}
+        initialTheme={initialTheme}
       >
         {children}
       </CmsShell>

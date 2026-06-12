@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/app/AppShell";
 import { getPrimaryAppRole, canAccessApp } from "@/lib/app-guards";
 import { CmsRole } from "@prisma/client";
@@ -26,12 +27,16 @@ export default async function AppLayout({
     await signOut({ redirectTo: "/cms/login" });
   }
 
+  const initialTheme =
+    (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
+
   return (
     <AppShell
       user={{ name: u.name ?? null, email: u.email }}
       role={role}
       isMaster={isMaster}
       signOut={handleSignOut}
+      initialTheme={initialTheme}
     >
       {children}
     </AppShell>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { AreaSwitcher } from "@/components/AreaSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { AppRole } from "@/lib/app-guards";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   role: AppRole;
   isMaster: boolean;
   signOut: () => void;
+  initialTheme?: "dark" | "light";
   children: React.ReactNode;
 };
 
@@ -55,7 +57,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
   CLIENT: "Cliente",
 };
 
-export function AppShell({ user, role, isMaster, signOut, children }: Props) {
+export function AppShell({ user, role, isMaster, signOut, initialTheme = "dark", children }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const items = NAV_BY_ROLE[role] ?? NAV_BY_ROLE.CLIENT;
@@ -115,10 +117,15 @@ export function AppShell({ user, role, isMaster, signOut, children }: Props) {
           className="rounded-xl border p-3"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="text-[12px] font-semibold text-white">
-            {user.name ?? user.email}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-[12px] font-semibold text-white">
+                {user.name ?? user.email}
+              </div>
+              <div className="text-[11px] text-white/45">{ROLE_LABELS[role]}</div>
+            </div>
+            <ThemeToggle />
           </div>
-          <div className="text-[11px] text-white/45">{ROLE_LABELS[role]}</div>
           <button
             type="button"
             onClick={signOut}
@@ -132,7 +139,11 @@ export function AppShell({ user, role, isMaster, signOut, children }: Props) {
   );
 
   return (
-    <div className="flex min-h-screen flex-col" style={{ background: "var(--bg)" }}>
+    <div
+      data-theme={initialTheme}
+      className="flex min-h-screen flex-col"
+      style={{ background: "var(--bg)" }}
+    >
       <AreaSwitcher
         current="app"
         isMaster={isMaster}

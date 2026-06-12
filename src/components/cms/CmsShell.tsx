@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { AreaSwitcher } from "@/components/AreaSwitcher";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Props = {
   user: {
@@ -16,6 +17,7 @@ type Props = {
   /** kind === "ADMIN" — el master del sistema, ve también /admin */
   isMaster?: boolean;
   signOut: () => void;
+  initialTheme?: "dark" | "light";
   children: React.ReactNode;
 };
 
@@ -24,6 +26,7 @@ export function CmsShell({
   isSuper,
   isMaster = false,
   signOut,
+  initialTheme = "dark",
   children,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -168,11 +171,16 @@ export function CmsShell({
           className="rounded-xl border p-3"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="text-[12px] font-semibold text-white">
-            {user.name ?? user.email}
-          </div>
-          <div className="text-[11px] capitalize text-white/45">
-            {user.role.toLowerCase().replace("_", " ")}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-[12px] font-semibold text-white">
+                {user.name ?? user.email}
+              </div>
+              <div className="text-[11px] capitalize text-white/45">
+                {user.role.toLowerCase().replace("_", " ")}
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
           <button
             type="button"
@@ -188,6 +196,7 @@ export function CmsShell({
 
   return (
     <div
+      data-theme={initialTheme}
       className="flex min-h-screen flex-col"
       style={{ background: "var(--bg)" }}
     >

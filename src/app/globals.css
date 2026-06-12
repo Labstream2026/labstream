@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
+  /* Base de primer plano: en oscuro es blanco (text-white sigue blanco). */
+  --fg: #ffffff;
+  --fg-invert: #0a0a0a;
   --bg: #080808;
   --bg-2: #0f0f0f;
   --surface: #121212;
@@ -10,12 +14,55 @@
   --text: #f0f0ee;
   --muted: rgba(255, 255, 255, 0.55);
   --dim: rgba(255, 255, 255, 0.32);
+  /* Tokens de elevación/hairline que VOLTEAN con el tema. Sustituyen a los
+     `bg-white/x` y `border-white/x` fijos para que el modo claro funcione. */
+  --elev-1: rgba(255, 255, 255, 0.04);
+  --elev-2: rgba(255, 255, 255, 0.08);
+  --elev-3: rgba(255, 255, 255, 0.13);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --hairline-strong: rgba(255, 255, 255, 0.18);
   --orange: #e8640c;
   --orange-2: #c5520a;
   --accent: #7b61ff;
   --green: #22c55e;
   --red: #ef4444;
   --yellow: #f59e0b;
+}
+
+/* ── Modo claro ─────────────────────────────────────────────────────
+   Se activa con <html data-theme="light">. Usamos `html[...]` (mayor
+   especificidad) para ganarle al :root que inyecta el layout con los colores
+   del CMS. Los tokens de texto/superficie se invierten; naranja/acento se
+   conservan. */
+/* Cualquier contenedor con [data-theme] reestablece su color de texto base a
+   partir de SUS propias variables (la herencia de `color` desde <body> pasa el
+   valor computado, no la variable, así que sin esto el texto heredado no
+   voltea). También fija el fondo del subtree. */
+[data-theme] {
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* En claro el primer plano es casi-negro: text-white/bg-white/border-white
+     se vuelven oscuros automáticamente. */
+  --fg: #161310;
+  --fg-invert: #ffffff;
+  --bg: #fbfbf9;
+  --bg-2: #f3f3f0;
+  --surface: #ffffff;
+  --surface-2: #f4f4f1;
+  --border: rgba(20, 18, 15, 0.1);
+  --border-2: rgba(20, 18, 15, 0.16);
+  --text: #161310;
+  --muted: rgba(22, 19, 16, 0.62);
+  --dim: rgba(22, 19, 16, 0.42);
+  --elev-1: rgba(22, 19, 16, 0.04);
+  --elev-2: rgba(22, 19, 16, 0.07);
+  --elev-3: rgba(22, 19, 16, 0.11);
+  --hairline: rgba(22, 19, 16, 0.12);
+  --hairline-strong: rgba(22, 19, 16, 0.2);
 }
 
 @theme inline {
@@ -28,6 +75,12 @@
   --color-dim: var(--dim);
   --color-orange: var(--orange);
   --color-accent: var(--accent);
+  /* TRUCO DE TEMA: `white`/`black` apuntan a variables que voltean con el
+     tema. Así TODAS las utilidades `text-white/x`, `bg-white/x`,
+     `border-white/x` (y sus opacidades) cambian solas en modo claro, sin tocar
+     cada componente. `inline` hace que el utility use la var en runtime. */
+  --color-white: var(--fg);
+  --color-black: var(--fg-invert);
   --font-heading: "Instrument Serif", serif;
   --font-body: "Figtree", sans-serif;
 }
@@ -39,6 +92,10 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+/* Transición suave al cambiar de tema. */
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 * {
@@ -125,14 +182,14 @@ select {
 
 /* Liquid glass cards */
 .lg {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--elev-1);
+  border: 1px solid var(--hairline);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
 .lg-strong {
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--elev-2);
+  border: 1px solid var(--hairline-strong);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -154,9 +211,9 @@ select {
 }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--elev-2);
+  border: 1px solid var(--hairline);
+  color: var(--text);
   border-radius: 9999px;
   padding: 11px 19px;
   font-weight: 500;
@@ -167,5 +224,5 @@ select {
   transition: background 0.2s;
 }
 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--elev-3);
 }
