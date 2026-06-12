@@ -347,7 +347,21 @@ model SiteSettings {
   colorBg      String   @default("#080808")
   colorText    String   @default("#F0F0EE")
 
+  // Borrador en vivo del CMS (apariencia + ajustes) para la vista previa.
+  draft        Json?
+
   updatedAt    DateTime @updatedAt
+}
+
+/// Borrador de vista previa para superficies que NO son un registro único:
+/// colecciones (equipo, testimonios, logos, FAQs). La key identifica la
+/// superficie ("team", "testimonials", "logos", "faqs") y `data` guarda el
+/// estado editado (normalmente `{ items: [...] }`). Sólo lo leen las páginas
+/// públicas en modo ?preview=1 para un editor con sesión CMS.
+model PreviewDraft {
+  key       String   @id
+  data      Json
+  updatedAt DateTime @updatedAt
 }
 
 // ─── Webapp: Organizations ───────────────────────────────────────

@@ -6,6 +6,7 @@ import { setError, setSuccess } from "@/lib/cms-flash";
 import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { LivePreview } from "@/components/cms/LivePreview";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function saveLogo(formData: FormData) {
@@ -121,6 +122,7 @@ export default async function LogosPage() {
   });
 
   return (
+    <LivePreview mode="collection" model="logos" previewPath="/">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader
         eyebrow="Web pública"
@@ -266,6 +268,7 @@ export default async function LogosPage() {
         </form>
       </div>
     </div>
+    </LivePreview>
   );
 }
 

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/cms-guard";
 import { FormShortcuts } from "@/components/cms/form";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 async function saveSettings(formData: FormData) {
   "use server";
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
   const socials = (settings?.socials as Record<string, string> | null) ?? {};
 
   return (
+    <LivePreview mode="config" model="settings" previewPath="/">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <div className="mb-8">
         <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
@@ -89,6 +91,7 @@ export default async function SettingsPage() {
         </div>
       </form>
     </div>
+    </LivePreview>
   );
 }
 

@@ -12,8 +12,14 @@ import { FaqAccordion } from "@/components/public/FaqAccordion";
 import { AnimatedStat } from "@/components/public/AnimatedStat";
 import { ScrollReveal } from "@/components/public/ScrollReveal";
 import { ArrowUpRight, ChevronRight } from "@/components/Icons";
-import { isPreviewMode, mergeDraft } from "@/lib/preview";
+import {
+  isPreviewMode,
+  mergeDraft,
+  getCollectionDraft,
+  orderCollectionDraft,
+} from "@/lib/preview";
 import { resolveHome } from "@/lib/home-defaults";
+import { ThemePreviewStyle } from "@/components/cms/ThemePreviewStyle";
 
 const PORTFOLIO_CATEGORY_LABELS: Record<PortfolioCategory, string> = {
   COMERCIAL: "Comercial",
@@ -82,8 +88,30 @@ export default async function HomePage(props: {
     preview ? mergeDraft(homeRecord, homeRecord.draft) : homeRecord,
   );
 
+  // En preview, si hay borrador de estas colecciones, las usamos en vez de lo
+  // publicado (mismo filtro/orden/tope que el query original).
+  let logosView = logos;
+  let testimonialsView = testimonials;
+  let faqsView = faqs;
+  if (preview) {
+    const [logoDraft, testiDraft, faqDraft] = await Promise.all([
+      getCollectionDraft("logos"),
+      getCollectionDraft("testimonials"),
+      getCollectionDraft("faqs"),
+    ]);
+    if (logoDraft)
+      logosView = orderCollectionDraft(logoDraft, { take: 8 }) as typeof logos;
+    if (testiDraft)
+      testimonialsView = orderCollectionDraft(testiDraft, {
+        featured: true,
+      }) as typeof testimonials;
+    if (faqDraft)
+      faqsView = orderCollectionDraft(faqDraft, { take: 6 }) as typeof faqs;
+  }
+
   return (
     <main>
+      {preview ? <ThemePreviewStyle /> : null}
       <ScrollProgress />
       <Navbar />
       <WhatsAppFloat />
@@ -104,7 +132,7 @@ export default async function HomePage(props: {
         backgroundImage={home.heroBackgroundImage}
       />
 
-      <ClientLogos logos={logos} />
+      <ClientLogos logos={logosView} />
 
       {/* Stats */}
       {home.stats.length > 0 && (
@@ -269,7 +297,7 @@ export default async function HomePage(props: {
       </section>
 
       {/* Testimonials */}
-      <Testimonials items={testimonials} />
+      <Testimonials items={testimonialsView} />
 
       {/* Process */}
       {home.processSteps.length > 0 && (
@@ -393,7 +421,7 @@ export default async function HomePage(props: {
       )}
 
       {/* FAQ */}
-      <FaqAccordion items={faqs} />
+      <FaqAccordion items={faqsView} />
 
       {/* CTA final */}
       <section className="px-6 py-24" style={{ background: "var(--bg)" }}>

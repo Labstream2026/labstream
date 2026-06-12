@@ -7,6 +7,7 @@ import { ImageField } from "@/components/cms/ImageField";
 import { SortableList } from "@/components/cms/SortableList";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 async function saveTestimonial(formData: FormData) {
   "use server";
@@ -141,6 +142,7 @@ export default async function TestimonialsPage() {
   });
 
   return (
+    <LivePreview mode="collection" model="testimonials" previewPath="/">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader
         eyebrow="Web pública"
@@ -303,6 +305,7 @@ export default async function TestimonialsPage() {
         </form>
       </div>
     </div>
+    </LivePreview>
   );
 }
 

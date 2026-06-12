@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { isPreviewMode, mergeDraft } from "@/lib/preview";
+import {
+  isPreviewMode,
+  mergeDraft,
+  getCollectionDraft,
+  orderCollectionDraft,
+} from "@/lib/preview";
 import { Navbar } from "@/components/public/Navbar";
 import { ScrollProgress } from "@/components/public/ScrollProgress";
 import { WhatsAppFloat } from "@/components/public/WhatsAppFloat";
@@ -30,6 +35,15 @@ export default async function NosotrosPage(props: {
   const about =
     preview && aboutFound ? mergeDraft(aboutFound, aboutFound.draft) : aboutFound;
   const values = (about?.values as Array<{ icon: string; title: string; desc: string }>) ?? [];
+
+  // En modo preview, si hay borrador del equipo, lo usamos en vez del publicado.
+  let teamView = team;
+  if (preview) {
+    const draft = await getCollectionDraft("team");
+    if (draft) {
+      teamView = orderCollectionDraft(draft, { featured: true }) as typeof team;
+    }
+  }
 
   return (
     <main>
@@ -185,7 +199,7 @@ export default async function NosotrosPage(props: {
       )}
 
       {/* Equipo */}
-      <TeamGrid members={team} />
+      <TeamGrid members={teamView} />
 
       {/* CTA */}
       <section className="px-6 py-24" style={{ background: "var(--bg-2)" }}>

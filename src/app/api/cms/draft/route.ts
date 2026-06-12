@@ -3,11 +3,18 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessCms, canEditPages } from "@/lib/cms-guard";
-import type { PreviewModel } from "@/lib/preview";
+import {
+  COLLECTION_SURFACES,
+  CONFIG_SURFACES,
+  type PreviewModel,
+  type CollectionSurface,
+  type ConfigSurface,
+} from "@/lib/preview";
 
 const MAX_DRAFT_BYTES = 200 * 1024; // 200 KB tope por draft
 
-const VALID_MODELS: PreviewModel[] = [
+// Registros únicos: el borrador vive en la columna `draft` del propio registro.
+const RECORD_MODELS: PreviewModel[] = [
   "portfolio",
   "blog",
   "service",
@@ -15,7 +22,17 @@ const VALID_MODELS: PreviewModel[] = [
   "home",
 ];
 
-function modelDelegate(model: PreviewModel) {
+function isRecordModel(m: string): m is PreviewModel {
+  return (RECORD_MODELS as string[]).includes(m);
+}
+function isCollectionSurface(m: string): m is CollectionSurface {
+  return (COLLECTION_SURFACES as string[]).includes(m);
+}
+function isConfigSurface(m: string): m is ConfigSurface {
+  return (CONFIG_SURFACES as string[]).includes(m);
+}
+
+function recordDelegate(model: PreviewModel) {
   switch (model) {
     case "portfolio":
       return prisma.portfolioProject;
@@ -40,14 +57,18 @@ async function requireEditor() {
   return session.user;
 }
 
-/** ¿Es un objeto JSON plano (no array, no null) dentro del límite de tamaño? */
-function isValidDraftData(data: unknown): data is Record<string, unknown> {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+/** Tamaño serializado dentro del límite. */
+function withinSize(data: unknown): boolean {
   try {
     return JSON.stringify(data).length <= MAX_DRAFT_BYTES;
   } catch {
     return false;
   }
+}
+
+/** ¿Objeto JSON plano (no array, no null)? */
+function isPlainObject(data: unknown): data is Record<string, unknown> {
+  return Boolean(data) && typeof data === "object" && !Array.isArray(data);
 }
 
 export async function POST(req: Request) {
@@ -56,7 +77,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  let body: { model?: string; id?: string; data?: Record<string, unknown> };
+  let body: { model?: string; id?: string; data?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -64,23 +85,51 @@ export async function POST(req: Request) {
   }
 
   const { model, id, data } = body;
-  if (!model || !VALID_MODELS.includes(model as PreviewModel)) {
+  if (!model || typeof model !== "string") {
     return NextResponse.json({ ok: false, error: "invalid_model" }, { status: 400 });
   }
-  if (!id || typeof id !== "string") {
-    return NextResponse.json({ ok: false, error: "invalid_id" }, { status: 400 });
-  }
-  if (!isValidDraftData(data)) {
+  if (!isPlainObject(data) || !withinSize(data)) {
     return NextResponse.json({ ok: false, error: "invalid_data" }, { status: 400 });
   }
 
-  const delegate = modelDelegate(model as PreviewModel);
   try {
-    // @ts-expect-error — delegate union has a compatible update shape
-    await delegate.update({
-      where: { id },
-      data: { draft: data as Prisma.InputJsonValue },
-    });
+    if (isRecordModel(model)) {
+      if (!id || typeof id !== "string") {
+        return NextResponse.json({ ok: false, error: "invalid_id" }, { status: 400 });
+      }
+      const delegate = recordDelegate(model);
+      // @ts-expect-error — la unión de delegates tiene un update compatible
+      await delegate.update({
+        where: { id },
+        data: { draft: data as Prisma.InputJsonValue },
+      });
+    } else if (isCollectionSurface(model)) {
+      const items = (data as { items?: unknown }).items;
+      if (!Array.isArray(items)) {
+        return NextResponse.json({ ok: false, error: "invalid_data" }, { status: 400 });
+      }
+      await prisma.previewDraft.upsert({
+        where: { key: model },
+        update: { data: data as Prisma.InputJsonValue },
+        create: { key: model, data: data as Prisma.InputJsonValue },
+      });
+    } else if (isConfigSurface(model)) {
+      // Apariencia y ajustes comparten SiteSettings.draft; fusionamos para que
+      // editar una no borre el borrador de la otra.
+      const existing = await prisma.siteSettings.findUnique({
+        where: { id: "singleton" },
+        select: { draft: true },
+      });
+      const prev = isPlainObject(existing?.draft) ? existing!.draft : {};
+      const merged = { ...prev, ...(data as Record<string, unknown>) };
+      await prisma.siteSettings.upsert({
+        where: { id: "singleton" },
+        update: { draft: merged as Prisma.InputJsonValue },
+        create: { id: "singleton", draft: merged as Prisma.InputJsonValue },
+      });
+    } else {
+      return NextResponse.json({ ok: false, error: "invalid_model" }, { status: 400 });
+    }
   } catch {
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 500 });
   }
@@ -98,20 +147,27 @@ export async function DELETE(req: Request) {
   const model = url.searchParams.get("model") ?? "";
   const id = url.searchParams.get("id") ?? "";
 
-  if (!VALID_MODELS.includes(model as PreviewModel)) {
-    return NextResponse.json({ ok: false, error: "invalid_model" }, { status: 400 });
-  }
-  if (!id) {
-    return NextResponse.json({ ok: false, error: "invalid_id" }, { status: 400 });
-  }
-
-  const delegate = modelDelegate(model as PreviewModel);
   try {
-    // @ts-expect-error — delegate union has a compatible update shape
-    await delegate.update({
-      where: { id },
-      data: { draft: Prisma.JsonNull },
-    });
+    if (isRecordModel(model)) {
+      if (!id) {
+        return NextResponse.json({ ok: false, error: "invalid_id" }, { status: 400 });
+      }
+      const delegate = recordDelegate(model);
+      // @ts-expect-error — la unión de delegates tiene un update compatible
+      await delegate.update({
+        where: { id },
+        data: { draft: Prisma.JsonNull },
+      });
+    } else if (isCollectionSurface(model)) {
+      await prisma.previewDraft.deleteMany({ where: { key: model } });
+    } else if (isConfigSurface(model)) {
+      await prisma.siteSettings.update({
+        where: { id: "singleton" },
+        data: { draft: Prisma.JsonNull },
+      });
+    } else {
+      return NextResponse.json({ ok: false, error: "invalid_model" }, { status: 400 });
+    }
   } catch {
     return NextResponse.json({ ok: false, error: "clear_failed" }, { status: 500 });
   }

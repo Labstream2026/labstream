@@ -25,12 +25,19 @@ type Props = {
 
 type Tab = "library" | "upload" | "url";
 
+type ApiResp = {
+  ok?: boolean;
+  error?: unknown;
+  asset?: { url: string; alt?: string | null };
+  assets?: Asset[];
+};
+
 /** Lee la respuesta como JSON sin romper si el cuerpo viene vacío o no es JSON. */
-async function safeJson(r: Response): Promise<Record<string, unknown>> {
+async function safeJson(r: Response): Promise<ApiResp> {
   const text = await r.text().catch(() => "");
   if (!text) return {};
   try {
-    return JSON.parse(text) as Record<string, unknown>;
+    return JSON.parse(text) as ApiResp;
   } catch {
     return {};
   }
@@ -113,10 +120,8 @@ export function AssetPicker({
       fd.append("json", "1");
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const j = await safeJson(r);
-      if (!r.ok || !j.ok) {
-        setUploadError(
-          uploadErrorMessage(j.error, r.status),
-        );
+      if (!r.ok || !j.ok || !j.asset) {
+        setUploadError(uploadErrorMessage(j.error, r.status));
         return;
       }
       // Auto-pick
@@ -139,7 +144,7 @@ export function AssetPicker({
         body: JSON.stringify({ url: externalUrl, alt: externalAlt }),
       });
       const j = await safeJson(r);
-      if (r.ok && j.ok) {
+      if (r.ok && j.ok && j.asset) {
         onPick({ url: j.asset.url, alt: externalAlt || undefined });
         onClose();
       } else {

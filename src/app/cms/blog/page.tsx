@@ -7,6 +7,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { blogCreateSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { PreviewPanel } from "@/components/cms/PreviewPanel";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function createPost(formData: FormData) {
@@ -115,6 +116,7 @@ export default async function BlogListPage(props: {
   };
 
   return (
+    <PreviewPanel path="/blog">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader
         eyebrow="Web pública"
@@ -337,6 +339,7 @@ export default async function BlogListPage(props: {
         </form>
       </div>
     </div>
+    </PreviewPanel>
   );
 }
 

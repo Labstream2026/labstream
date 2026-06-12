@@ -5,6 +5,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { SortableList } from "@/components/cms/SortableList";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { LivePreview } from "@/components/cms/LivePreview";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 async function saveFaq(formData: FormData) {
@@ -122,6 +123,7 @@ export default async function FaqsPage() {
   });
 
   return (
+    <LivePreview mode="collection" model="faqs" previewPath="/">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader
         eyebrow="Web pública"
@@ -262,6 +264,7 @@ export default async function FaqsPage() {
         </form>
       </div>
     </div>
+    </LivePreview>
   );
 }
 

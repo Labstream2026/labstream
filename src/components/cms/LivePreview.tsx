@@ -1,13 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PreviewModel } from "@/lib/preview";
+import type {
+  PreviewModel,
+  CollectionSurface,
+  ConfigSurface,
+} from "@/lib/preview";
 
 type Status = "idle" | "saving" | "saved" | "error";
 
+/** "record": un solo form (el actual). "collection": varios forms-ítem que
+ *  se agregan en un array. "config": un solo form de config global. */
+type Mode = "record" | "collection" | "config";
+
 type Props = {
-  model: PreviewModel;
-  recordId: string;
+  model: PreviewModel | CollectionSurface | ConfigSurface;
+  /** Sólo necesario en modo "record". Para colección/config se ignora. */
+  recordId?: string;
+  mode?: Mode;
   /** Public route to render in the iframe. Should NOT include `?preview=1` — added automatically. */
   previewPath: string;
   children: React.ReactNode;
@@ -15,7 +25,8 @@ type Props = {
 
 export function LivePreview({
   model,
-  recordId,
+  recordId = "singleton",
+  mode = "record",
   previewPath,
   children,
 }: Props) {
@@ -34,11 +45,21 @@ export function LivePreview({
   }, []);
 
   const sendDraft = useCallback(async () => {
-    const form = formRef.current;
-    if (!form) return;
     let data: Record<string, unknown>;
     try {
-      data = serializeForModel(model, new FormData(form));
+      if (mode === "collection") {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+        data = serializeCollection(wrapper);
+      } else {
+        const form = formRef.current;
+        if (!form) return;
+        const fd = new FormData(form);
+        data =
+          mode === "config"
+            ? serializeConfig(model as ConfigSurface, fd)
+            : serializeForModel(model as PreviewModel, fd);
+      }
     } catch {
       setStatus("error");
       return;
@@ -63,7 +84,7 @@ export function LivePreview({
       if ((err as Error).name === "AbortError") return;
       setStatus("error");
     }
-  }, [model, recordId]);
+  }, [model, recordId, mode]);
 
   const scheduleSave = useCallback(() => {
     if (!active) return;
@@ -75,16 +96,19 @@ export function LivePreview({
 
   useEffect(() => {
     if (!active) return;
-    const form = formRef.current;
-    if (!form) return;
+    // En modo colección escuchamos en el wrapper (varios forms-ítem); en
+    // record/config basta el form único.
+    const target: HTMLElement | null =
+      mode === "collection" ? wrapperRef.current : formRef.current;
+    if (!target) return;
     const onAny = () => scheduleSave();
-    form.addEventListener("input", onAny);
-    form.addEventListener("change", onAny);
+    target.addEventListener("input", onAny);
+    target.addEventListener("change", onAny);
     return () => {
-      form.removeEventListener("input", onAny);
-      form.removeEventListener("change", onAny);
+      target.removeEventListener("input", onAny);
+      target.removeEventListener("change", onAny);
     };
-  }, [active, scheduleSave]);
+  }, [active, scheduleSave, mode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -203,6 +227,75 @@ function serializeForModel(
     case "home":
       return serializeHome(form);
   }
+}
+
+// ─── Colecciones ────────────────────────────────────────────────────
+// Recoge TODOS los forms-ítem (los que llevan un hidden `id` no vacío) dentro
+// del editor y los serializa a un array genérico. Los nombres de los inputs
+// coinciden con las columnas que lee la página pública.
+
+function serializeCollection(wrapper: HTMLElement): Record<string, unknown> {
+  const forms = Array.from(wrapper.querySelectorAll("form"));
+  const items: Record<string, unknown>[] = [];
+  for (const form of forms) {
+    const fd = new FormData(form);
+    const id = fd.get("id");
+    // Saltamos el form de "crear" (sin id) y el de reordenar.
+    if (typeof id !== "string" || !id.trim()) continue;
+    items.push(serializeGenericForm(fd));
+  }
+  return { items };
+}
+
+/** FormData → objeto: checkboxes ("on") → true, enteros → number, resto string. */
+function serializeGenericForm(fd: FormData): Record<string, unknown> {
+  const obj: Record<string, unknown> = {};
+  for (const [k, v] of fd.entries()) {
+    if (typeof v !== "string") continue; // ignora File
+    if (v === "on") {
+      obj[k] = true;
+      continue;
+    }
+    const t = v.trim();
+    if (t !== "" && /^-?\d+$/.test(t)) {
+      obj[k] = Number(t);
+      continue;
+    }
+    obj[k] = v;
+  }
+  return obj;
+}
+
+// ─── Config global (apariencia + ajustes) ───────────────────────────
+
+function serializeConfig(
+  model: ConfigSurface,
+  form: FormData,
+): Record<string, unknown> {
+  if (model === "appearance") {
+    return {
+      fontHeading: strOrNull(form, "fontHeading"),
+      fontBody: strOrNull(form, "fontBody"),
+      colorPrimary: strOrNull(form, "colorPrimary"),
+      colorAccent: strOrNull(form, "colorAccent"),
+      colorBg: strOrNull(form, "colorBg"),
+      colorText: strOrNull(form, "colorText"),
+      logoUrl: strOrNull(form, "logoUrl"),
+      faviconUrl: strOrNull(form, "faviconUrl"),
+    };
+  }
+  // settings
+  return {
+    siteName: strOrNull(form, "siteName"),
+    tagline: strOrNull(form, "tagline"),
+    contactEmail: strOrNull(form, "contactEmail"),
+    socials: {
+      instagram: strOrNull(form, "instagram"),
+      vimeo: strOrNull(form, "vimeo"),
+      youtube: strOrNull(form, "youtube"),
+      linkedin: strOrNull(form, "linkedin"),
+    },
+  };
 }
 
 function str(form: FormData, key: string): string {

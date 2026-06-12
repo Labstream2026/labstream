@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/cms-guard";
 import { FONT_OPTIONS } from "@/lib/site-settings";
 import { AppearanceForm } from "@/components/cms/AppearanceForm";
+import { LivePreview } from "@/components/cms/LivePreview";
 
 /** Acepta solo hex #RRGGBB; cualquier otra cosa cae al default. Estos valores
  *  se interpolan en un <style dangerouslySetInnerHTML> del sitio público, así
@@ -65,6 +66,7 @@ export default async function AppearancePage() {
   });
 
   return (
+    <LivePreview mode="config" model="appearance" previewPath="/">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <div className="mb-8">
         <div className="text-[12px] font-semibold uppercase tracking-widest text-orange">
@@ -97,5 +99,6 @@ export default async function AppearancePage() {
         fontOptions={FONT_OPTIONS}
       />
     </div>
+    </LivePreview>
   );
 }

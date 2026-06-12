@@ -7,6 +7,7 @@ import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError, setSuccess } from "@/lib/cms-flash";
 import { portfolioCreateSchema, parseForm, summarizeErrors } from "@/lib/cms-schemas";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { PreviewPanel } from "@/components/cms/PreviewPanel";
 import { ConfirmButton } from "@/components/cms/ConfirmButton";
 
 const CATEGORY_LABELS: Record<PortfolioCategory, string> = {
@@ -108,6 +109,7 @@ export default async function PortfolioListPage(props: {
   const totalCount = await prisma.portfolioProject.count();
 
   return (
+    <PreviewPanel path="/portafolio">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader
         eyebrow="Web pública"
@@ -315,6 +317,7 @@ export default async function PortfolioListPage(props: {
         </form>
       </div>
     </div>
+    </PreviewPanel>
   );
 }
 

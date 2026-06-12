@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCmsUser, canEditPages } from "@/lib/cms-guard";
 import { setError } from "@/lib/cms-flash";
 import { PageHeader, FormShortcuts } from "@/components/cms/form";
+import { PreviewPanel } from "@/components/cms/PreviewPanel";
 
 async function saveService(formData: FormData) {
   "use server";
@@ -83,6 +84,7 @@ export default async function ServicesPage() {
   });
 
   return (
+    <PreviewPanel path="/servicios">
     <div className="px-5 py-6 md:px-10 md:py-10">
       <PageHeader eyebrow="Catálogo" title="Servicios" />
 
@@ -188,5 +190,6 @@ export default async function ServicesPage() {
         </form>
       </div>
     </div>
+    </PreviewPanel>
   );
 }
