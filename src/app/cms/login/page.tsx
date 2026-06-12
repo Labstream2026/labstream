@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { UserKind } from "@prisma/client";
-import { auth, signIn } from "@/auth";
+import { auth, signIn, authentikEnabled } from "@/auth";
 import { AuthError } from "next-auth";
 import { Logo } from "@/components/Logo";
 import { canAccessCms } from "@/lib/cms-guard";
@@ -70,6 +70,14 @@ export default async function LoginPage(props: {
     }
   }
 
+  async function handleAuthentik() {
+    "use server";
+    const explicitTarget = safeNext(next);
+    await signIn("authentik", {
+      redirectTo: explicitTarget || "/api/auth/post-login",
+    });
+  }
+
   return (
     <div
       className="flex min-h-screen items-center justify-center px-6"
@@ -126,6 +134,25 @@ export default async function LoginPage(props: {
               Iniciar sesión
             </button>
           </form>
+
+          {authentikEnabled && (
+            <>
+              <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/30">
+                <span className="h-px flex-1 bg-white/10" />
+                o
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
+              <form action={handleAuthentik}>
+                <input type="hidden" name="next" value={next} />
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-white/10"
+                >
+                  Iniciar sesión con Authentik
+                </button>
+              </form>
+            </>
+          )}
         </div>
 
         <p className="mt-6 text-center text-[12px] text-white/40">
