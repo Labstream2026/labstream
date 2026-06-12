@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Authentik from "next-auth/providers/authentik";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
@@ -24,6 +25,18 @@ export const authentikEnabled = Boolean(
     process.env.AUTHENTIK_CLIENT_ID &&
     process.env.AUTHENTIK_CLIENT_SECRET,
 );
+
+/**
+ * Auto-provisión por SSO: las cuentas de Authentik con email de este dominio
+ * que aún no existen en la app se crean solas como Equipo (TEAM) la primera vez
+ * que entran. Las de otros dominios (externos) se rechazan. Configurable por
+ * env; "" desactiva la auto-provisión (solo entran usuarios pre-creados).
+ */
+const AUTHENTIK_PROVISION_DOMAIN = (
+  process.env.AUTHENTIK_PROVISION_DOMAIN ?? "labstreamsas.com"
+)
+  .toLowerCase()
+  .trim();
 
 const providers: NextAuthConfig["providers"] = [
   Credentials({
@@ -81,11 +94,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   callbacks: {
     /**
-     * Para Authentik: solo dejamos entrar a personas que YA existen como
-     * usuario activo de la app (emparejadas por email). Así un cambio de
-     * contraseña/SSO no crea accesos no autorizados; el rol/kind sale de
-     * nuestra BD, no de Authentik. (Si quieres auto-provisionar usuarios
-     * nuevos con un rol por defecto, se puede añadir aquí.)
+     * Para Authentik: entran (a) los usuarios que YA existen y están activos, o
+     * (b) los del dominio permitido (AUTHENTIK_PROVISION_DOMAIN), que se
+     * auto-provisionan como Equipo en el jwt. Los externos se rechazan. El
+     * rol/kind siempre sale de nuestra BD, no de Authentik.
      */
     async signIn({ user, account }) {
       if (account?.provider !== "authentik") return true;
@@ -95,7 +107,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         where: { email },
         select: { active: true },
       });
-      return Boolean(dbUser?.active);
+      // Usuario ya existente: dejamos entrar si está activo.
+      if (dbUser) return dbUser.active;
+      // No existe: solo lo dejamos pasar (para auto-provisionarlo en el jwt) si
+      // su email es del dominio permitido. Externos → rechazo.
+      return Boolean(
+        AUTHENTIK_PROVISION_DOMAIN &&
+          email.endsWith("@" + AUTHENTIK_PROVISION_DOMAIN),
+      );
     },
     async jwt({ token, user, account }) {
       if (user) {
@@ -103,9 +122,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // emparejamos por email con nuestro usuario para sacar id/rol/kind.
         if (account?.provider === "authentik") {
           const email = (user.email ?? "").toLowerCase();
-          const dbUser = email
+          let dbUser = email
             ? await prisma.user.findUnique({ where: { email } })
             : null;
+          // Auto-provisión: si no existe y el email es del dominio permitido,
+          // lo creamos como Equipo (solo webapp, ve proyectos asignados). El
+          // admin puede subirlo a Productor luego. Contraseña aleatoria (entra
+          // por SSO).
+          if (
+            !dbUser &&
+            email &&
+            AUTHENTIK_PROVISION_DOMAIN &&
+            email.endsWith("@" + AUTHENTIK_PROVISION_DOMAIN)
+          ) {
+            const hash = await bcrypt.hash(
+              randomBytes(24).toString("hex"),
+              12,
+            );
+            dbUser = await prisma.user.create({
+              data: {
+                email,
+                name: user.name ?? email,
+                kind: "TEAM",
+                role: "EDITOR",
+                active: true,
+                passwordHash: hash,
+              },
+            });
+          }
           if (dbUser && dbUser.active) {
             await prisma.user.update({
               where: { id: dbUser.id },
